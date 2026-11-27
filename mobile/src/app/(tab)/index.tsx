@@ -1,7 +1,7 @@
 import { Link, Redirect, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { Pressable, View } from "react-native";
-import { useAntrean } from "@/lib/antrean";
+import { useBuktiAbsen, useAntrean } from "@/lib/antrean";
 import { useHariIni } from "@/lib/hari-ini";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_GURU } from "@/lib/tipe";
@@ -14,11 +14,12 @@ export default function HariIni() {
   const antrean = useAntrean();
   useFocusEffect(useCallback(() => { void muat(); }, [muat]));
 
+  const bukti = useBuktiAbsen();
   const tanggal = data?.data.tanggal;
   const menunggu = useMemo(() => new Set(antrean
-    .filter((x) => x.path === "/api/pertemuan" && x.body.tanggal === tanggal)
+    .filter((x) => !x.galat && x.path === "/api/pertemuan" && x.body.tanggal === tanggal)
     .map((x) => String(x.body.jadwalId))), [antrean, tanggal]);
-  const absenTertunda = antrean.some((x) => x.path === "/api/absen-guru" && x.body.tanggal === tanggal);
+  const absenTertunda = antrean.some((x) => !x.galat && x.path === "/api/absen-guru" && x.body.tanggal === tanggal);
 
   if (!(u.peran === "GURU" || u.mengajar)) return <Redirect href="/pantauan" />;
   if (!data) return memuat ? <Memuat /> : <Layar segarkan={muat}><Pesan jenis="galat" teks={galat ?? "Gagal memuat jadwal."} /></Layar>;
@@ -38,16 +39,16 @@ export default function HariIni() {
       {kedaluwarsa && <Pesan jenis="galat" teks={`Jadwal ini dari ${data.data.tanggalTeks}. Sambungkan internet lalu tarik layar ke bawah untuk memuat jadwal hari ini.`} />}
       {galat && <Pesan jenis="galat" teks={galat} />}
 
-      <Kartu style={!a && !absenTertunda ? { borderColor: "#fcd34d", backgroundColor: "#fffbeb" } : undefined}>
+      <Kartu style={!a && bukti !== tanggal && !absenTertunda ? { borderColor: "#fcd34d", backgroundColor: "#fffbeb" } : undefined}>
         <Baris>
           <View style={{ flex: 1 }}>
             <T tebal>Absen Saya</T>
             <T redup>
               {a ? `${LABEL_STATUS_GURU[a.status]} · tercatat ${jamDiZona(zona, a.waktuMasuk)}`
-                : absenTertunda ? "Tersimpan di HP, menunggu dikirim." : "Anda belum absen hari ini."}
+                : bukti === tanggal ? "Terkirim" : absenTertunda ? "Tersimpan di HP, menunggu dikirim." : "Anda belum absen hari ini."}
             </T>
           </View>
-          {!a && !absenTertunda && <Tombol judul="Absen" onPress={() => router.navigate("/absen")} />}
+          {!a && bukti !== tanggal && !absenTertunda && <Tombol judul="Absen" onPress={() => router.navigate("/absen")} />}
         </Baris>
       </Kartu>
 
@@ -57,7 +58,7 @@ export default function HariIni() {
       </Baris>
       {jadwal.length === 0 && <Kartu><T redup>Tidak ada jadwal mengajar hari ini.</T></Kartu>}
       {jadwal.map((j) => {
-        const st = j.pertemuan ? "terisi" : menunggu.has(j.id) ? "menunggu" : "belum";
+        const st = menunggu.has(j.id) ? "menunggu" : j.pertemuan ? "terisi" : "belum";
         return (
           <Link key={j.id} href={{ pathname: "/isi/[jadwalId]", params: { jadwalId: j.id } }} asChild>
             <Pressable accessibilityRole="button" testID={`jadwal-${j.id}`}>
@@ -69,7 +70,7 @@ export default function HariIni() {
                     <T redup>Kelas {j.kelas.nama} · {j.siswa.length} siswa</T>
                   </View>
                   {st === "terisi" && <Lencana teks="Sudah diisi" jenis="hijau" />}
-                  {st === "menunggu" && <Lencana teks="Menunggu dikirim" jenis="kuning" />}
+                  {st === "menunggu" && <Lencana teks="Tersimpan di HP" jenis="kuning" />}
                   {st === "belum" && <Lencana teks="Isi absen" />}
                 </Baris>
               </Kartu>

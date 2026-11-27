@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { createContext, use, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { aturKoneksi, aturSaatTidakSah, GalatJaringan, minta, rapikanAlamat } from "./api";
-import { kosongkanAntrean, muatAntrean } from "./antrean";
+import { kosongkanAntrean, muatAntrean, titipAntrean, pulihkanAntrean } from "./antrean";
 import { bacaJson, bacaRahasia, hapus, simpanJson, simpanRahasia } from "./penyimpanan";
 import type { Saya } from "./tipe";
 
@@ -83,9 +83,18 @@ export function PenyediaSesi({ children }: PropsWithChildren) {
 
   // Token ditolak server (kedaluwarsa / kata sandi diganti): keluar
   useEffect(() => {
-    aturSaatTidakSah(() => { void keluar(); });
+    if (!saya) return;
+    let berjalan = false;
+    aturSaatTidakSah(() => {
+      if (berjalan) return;
+      berjalan = true;
+      void (async () => {
+        await titipAntrean(`titipan/${alamat}/${saya.pengguna.id}`);
+        await keluar();
+      })().finally(() => { berjalan = false; });
+    });
     return () => aturSaatTidakSah(null);
-  }, [keluar]);
+  }, [keluar, alamat, saya]);
 
   const masuk = useCallback(async (alamatMasukan: string, username: string, sandi: string) => {
     const al = rapikanAlamat(alamatMasukan);
@@ -94,6 +103,7 @@ export function PenyediaSesi({ children }: PropsWithChildren) {
     });
     aturKoneksi(al, r.token);
     const s = await minta<Saya>("/api/m/saya");
+    await pulihkanAntrean(`titipan/${al}/${s.pengguna.id}`);
     await Promise.all([simpanJson(KUNCI_ALAMAT, al), simpanRahasia(KUNCI_TOKEN, r.token), simpanJson(KUNCI_SAYA, s)]);
     setAlamat(al);
     setToken(r.token);

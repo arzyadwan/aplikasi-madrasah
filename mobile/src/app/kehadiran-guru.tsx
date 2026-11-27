@@ -6,7 +6,7 @@ import { useMuat } from "@/lib/muat";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_GURU, type ItemKehadiranGuru } from "@/lib/tipe";
 import { formatTanggal, jamDiZona, tanggalDiZona } from "@/lib/waktu";
-import { Baris, Kartu, Layar, Lencana, Memuat, NavTanggal, Pesan, T, W } from "@/components/ui";
+import { Baris, Kartu, Layar, Lencana, Memuat, NavTanggal, Pesan, T, Tombol, W } from "@/components/ui";
 
 export default function KehadiranGuru() {
   const { zona } = useSaya();
@@ -15,12 +15,12 @@ export default function KehadiranGuru() {
   const [tanggal, setTanggal] = useState(awal && awal <= hariIni ? awal : hariIni);
   const { data, galat, memuat, muat } = useMuat<{ guru: ItemKehadiranGuru[] }>(`/api/m/kehadiran-guru?tanggal=${tanggal}`);
 
-  if (!data && !galat) return <Memuat />;
   const sudah = data?.guru.filter((g) => g.absen).length ?? 0;
   return (
     <Layar segarkan={muat} memuat={memuat}>
       <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={setTanggal} />
-      {galat && <Pesan jenis="galat" teks={galat} />}
+      {memuat && <Memuat />}
+      {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
       {data && <T redup>{sudah} dari {data.guru.length} sudah absen</T>}
       {data?.guru.map((g) => {
         const a = g.absen;

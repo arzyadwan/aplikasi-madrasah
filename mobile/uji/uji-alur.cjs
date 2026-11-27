@@ -31,17 +31,19 @@ async function login(p, u) {
   // isi jadwal pertama
   await jadwal.first().click();
   await p.getByText("Kehadiran siswa").waitFor();
+  await p.getByRole("button", { name: /Ubah kehadiran siswa/ }).click();
   const radio = p.getByRole("radio");
   await radio.nth(1 * 4 + 3).click(); // siswa ke-2 → A
   await p.screenshot({ path: OUT + "3-isi.png" });
   await p.getByLabel("Materi yang diajarkan *").fill("Persamaan linear satu variabel (dari aplikasi HP)");
-  await p.getByRole("button", { name: /^Simpan/ }).click();
-  await p.getByText("Tersimpan. Terima kasih!").waitFor(); cek(true, "absen + jurnal terkirim");
+  await p.getByRole("button", { name: /^Simpan/ }).first().click();
+  await p.getByText("Terkirim.", { exact: true }).waitFor(); cek(true, "absen + jurnal terkirim");
   await p.getByText("Sudah diisi").first().waitFor(); cek(true, "status jadwal menjadi Sudah diisi");
 
   // absen GPS + selfie
   await p.getByRole("tab", { name: /Absen Saya/ }).click();
-  await p.getByRole("button", { name: "Ambil lokasi" }).click();
+  const ambil = p.getByRole("button", { name: "Ambil lokasi", exact: true });
+  if (await ambil.isVisible()) await ambil.click();
   await p.getByText(/Lokasi didapat \(akurasi ±12 m\)/).waitFor(); cek(true, "lokasi GPS didapat");
   const foto = await p.screenshot({ type: "jpeg", quality: 50, clip: { x: 0, y: 0, width: 300, height: 300 } });
   const [pilih] = await Promise.all([p.waitForEvent("filechooser"), p.getByRole("button", { name: "Buka kamera" }).click()]);
@@ -77,8 +79,8 @@ async function login(p, u) {
     await jadwal2.nth(1).click();
     await p.getByText("Kehadiran siswa").waitFor();
     await p.getByLabel("Materi yang diajarkan *").fill("Diisi saat offline di aplikasi HP");
-    await p.getByRole("button", { name: /^Simpan/ }).click();
-    await p.getByText(/Tidak ada internet. Data disimpan di HP/).waitFor(); cek(true, "isian offline masuk antrean");
+    await p.getByRole("button", { name: /^Simpan/ }).first().click();
+    await p.getByText(/Tersimpan di HP, menunggu dikirim/).waitFor(); cek(true, "isian offline masuk antrean");
     await p.getByRole("button", { name: /1 menunggu/ }).last().waitFor(); cek(true, "penanda '1 menunggu' tampil");
     await p.screenshot({ path: OUT + "6-offline.png" });
     await ctx.setOffline(false);
