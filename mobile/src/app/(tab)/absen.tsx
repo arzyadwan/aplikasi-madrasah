@@ -23,6 +23,10 @@ async function siapkanFoto(uri: string): Promise<string> {
   return `data:image/jpeg;base64,${hasil.base64}`;
 }
 
+function jarakTeks(meter: number) {
+  return meter >= 1000 ? (meter / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " km" : meter + " m";
+}
+
 export default function AbsenSaya() {
   const { zona } = useSaya();
   const { data, memuat, muat } = useHariIni();
@@ -47,7 +51,7 @@ export default function AbsenSaya() {
         <Kartu>
           <T tebal ukuran={18} style={{ color: W.utama }}>{LABEL_STATUS_GURU[a.status]}</T>
           <T redup>Tercatat pukul {jamDiZona(zona, a.waktuMasuk)}</T>
-          {a.jarakMeter != null && <T redup>Jarak dari madrasah ±{a.jarakMeter} m{a.dalamRadius === false ? " (di luar area madrasah)" : ""}</T>}
+          {a.jarakMeter != null && <T redup>Jarak dari madrasah ±{jarakTeks(a.jarakMeter)}{a.dalamRadius === false ? " (di luar area madrasah)" : ""}</T>}
           {a.keterangan && <T redup>Keterangan: {a.keterangan}</T>}
           {a.adaFoto && (
             <FotoAman absenId={a.id} label="Foto absen" style={{ width: 140, height: 180, borderRadius: 10, marginTop: 6 }} />
@@ -169,13 +173,13 @@ function FormAbsen({ tanggal, onSelesai, lokal }: { lokal?: ItemAntrean; tanggal
     <Kartu style={{ gap: 14 }}>
       <View style={{ gap: 6 }}>
         <T tebal ukuran={14}>Status</T>
-        <View style={{ flexDirection: "row", gap: 6 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {(Object.keys(LABEL_STATUS_GURU) as StatusGuru[]).map((s) => (
             <Pressable key={s} accessibilityRole="radio" accessibilityState={{ checked: status === s }} accessibilityLabel={LABEL_STATUS_GURU[s]}
               onPress={() => { if (s !== status) { setPercobaan(0); setStatus(s); } }}
-              style={{ flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center",
+              style={{ flexBasis: "47%", flexGrow: 1, minHeight: 48, justifyContent: "center", paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center",
                 borderColor: status === s ? W.utama : "#cbd5e1", backgroundColor: status === s ? W.utama : W.putih }}>
-              <Text style={{ fontWeight: "700", fontSize: 13, color: status === s ? W.putih : W.teks }}>{LABEL_STATUS_GURU[s]}</Text>
+              <Text style={{ fontWeight: "700", fontSize: 13, color: status === s ? W.putih : W.teks }}>{s === "DINAS" ? "Dinas" : LABEL_STATUS_GURU[s]}</Text>
             </Pressable>
           ))}
         </View>
@@ -185,7 +189,7 @@ function FormAbsen({ tanggal, onSelesai, lokal }: { lokal?: ItemAntrean; tanggal
         <>
           <View style={{ backgroundColor: W.latar, borderRadius: 10, padding: 12, gap: 6 }}>
             <T tebal>1. Lokasi</T>
-            {lokasi && <T redup>Lokasi didapat (akurasi ±{lokasi.akurasi} m).{jarak != null ? ` Jarak ke madrasah ±${jarak} m${jarak > madrasah.radiusMeter ? " (di luar area)" : ""}.` : ""}</T>}
+            {lokasi && <T redup>Lokasi didapat (akurasi ±{lokasi.akurasi} m).{jarak != null ? ` Jarak ke madrasah ±${jarakTeks(jarak)}${jarak > madrasah.radiusMeter ? " (di luar area)" : ""}.` : ""}</T>}
             {galatLokasi && <T style={{ color: W.merah }}>{galatLokasi}</T>}
             <Tombol jenis="garis" judul={mencari ? "Mencari lokasi…" : galatLokasi ? "Coba lokasi lagi" : lokasi ? "Perbarui lokasi" : "Ambil lokasi"} onPress={() => setPercobaan(n => n + 1)} memuat={mencari} />
           </View>

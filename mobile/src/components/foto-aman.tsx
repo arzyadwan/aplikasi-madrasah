@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
-import { Image, View, type ImageStyle, type StyleProp } from "react-native";
+import { Image, Platform, View, type ImageStyle, type StyleProp } from "react-native";
+import { W } from "./ui";
 import { alamatServer, headerAuth } from "@/lib/api";
 
 /** Foto absen dari server (butuh token), diunduh lalu ditampilkan */
-export function FotoAman({ absenId, label, style }: { absenId: string; label: string; style: StyleProp<ImageStyle> }) {
+type Props = { absenId: string; label: string; style: StyleProp<ImageStyle> };
+
+export function FotoAman(props: Props) {
+  if (Platform.OS === "web") return <FotoWeb key={props.absenId} {...props} />;
+  return <Image accessibilityLabel={props.label} resizeMethod="resize" resizeMode="cover" style={props.style}
+    source={{ uri: `${alamatServer()}/api/foto/${props.absenId}`, headers: headerAuth() }} />;
+}
+
+function FotoWeb({ absenId, label, style }: Props) {
   const [uri, setUri] = useState<string | null>(null);
   useEffect(() => {
     let batal = false;
@@ -19,6 +28,6 @@ export function FotoAman({ absenId, label, style }: { absenId: string; label: st
       .catch(() => {});
     return () => { batal = true; };
   }, [absenId]);
-  if (!uri) return <View style={[{ backgroundColor: "#e2e8f0" }, style as object]} />;
+  if (!uri) return <View style={[{ backgroundColor: W.garis }, style as object]} />;
   return <Image alt={label} accessibilityLabel={label} source={{ uri }} style={style} />;
 }

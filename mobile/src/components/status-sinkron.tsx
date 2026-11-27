@@ -1,10 +1,11 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import NetInfo from "@react-native-community/netinfo";
 import { useEffect, useState } from "react";
 import { Alert, AppState, Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { hapusDariAntrean, isiAntrean, sinkronkan, useAntrean, useTerkirim } from "@/lib/antrean";
 
 import { router } from "expo-router";
-import { T, Tombol } from "./ui";
+import { T, Tombol, W } from "./ui";
 import { useSaya } from "@/lib/sesi";
 import { tanggalDiZona } from "@/lib/waktu";
 
@@ -34,8 +35,9 @@ export function StatusSinkron() {
   const teks = [online ? "" : "Offline", tunggu ? `${tunggu} menunggu` : "", gagal ? `${gagal} perlu diperbaiki` : ""].filter(Boolean).join(" · ") || "Terkirim";
   if (online && !antrean.length && !terakhir && !buka) return null;
   return <>
-    <Pressable accessibilityRole="button" onPress={() => setBuka(true)} style={{ padding: 8, backgroundColor: "#fffbeb" }}>
-      <Text>{teks}</Text>
+    <Pressable accessibilityRole="button" onPress={() => setBuka(true)} accessibilityLabel={`Antrean pengiriman. ${teks}`} style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center", flexDirection: "row" }}>
+      <Ionicons name={gagal ? "alert-circle-outline" : !online ? "cloud-offline-outline" : antrean.length ? "cloud-upload-outline" : "checkmark-circle-outline"} size={22} color={W.putih} />
+      {antrean.length > 0 && <Text style={{ color: W.putih }}>{antrean.length}</Text>}
     </Pressable>
     <Modal visible={buka} onRequestClose={() => setBuka(false)} animationType="slide">
       <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>

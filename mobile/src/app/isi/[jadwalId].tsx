@@ -10,7 +10,7 @@ import { bacaJson, hapus, simpanJson } from "@/lib/penyimpanan";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_SISWA, type ItemJadwal, type ResponsHariIni, type StatusSiswa } from "@/lib/tipe";
 import { tanggalDiZona } from "@/lib/waktu";
-import { Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
+import { Daftar, Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
 
 const URUTAN: StatusSiswa[] = ["H", "S", "I", "A"];
 function akhiriKalimat(teks: string) {
@@ -53,7 +53,7 @@ export default function IsiPertemuan() {
     return () => { aktif = false; };
   }, [jadwalId, antreanId, kunci, prefix, hari]);
 
-  if (muatan?.kunci !== kunci) return <Memuat />;
+  if (muatan?.kunci !== kunci) return <Memuat teks="Memuat daftar siswa…" />;
   if (!muatan.item) {
     return (
       <Layar>
@@ -148,7 +148,7 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
   }
 
   async function simpan() {
-    if (pengganti && !(await konfirmasi("Guru pengganti", akhiriKalimat(`Anda akan mengisi sebagai guru pengganti untuk ${item.guru.nama}`)))) return;
+    if (pengganti && !(await konfirmasi("Guru pengganti", akhiriKalimat(`Isian ini akan dicatat atas nama Anda sebagai guru pengganti untuk ${item.guru.nama}`)))) return;
     if (sibuk.current || selesai.current) return;
     sibuk.current = true;
     try { await kirim(); }
@@ -160,7 +160,7 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
   const [sebelum, setSebelum] = useState<typeof isian | null>(null);
   const adaAbsen = rekap.H < item.siswa.length;
   const terbuka = dibuka || adaAbsen;
-  const daftar = useMemo(() => terbuka && item.siswa.map((s, i) => (
+  const barisSiswa = ({ item: s, index: i }: { item: ItemJadwal["siswa"][number]; index: number }) => (
           <View key={s.id} style={{ borderTopWidth: i ? 1 : 0, borderColor: W.garis, paddingVertical: 8, gap: 6 }}>
             <>
               <T ukuran={14}><Text style={{ color: W.redup }}>{i + 1}. </Text>{s.nama}</T>
@@ -180,17 +180,17 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
               </View>
             </>
             {isian[s.id].status !== "H" && (
-              <Masukan label={`Keterangan ${s.nama}`} sembunyikanLabel placeholder="Keterangan (opsional)" editable={bolehIsi && !proses && !selesai.current} value={isian[s.id].keterangan}
+              <Masukan label={`Keterangan ${s.nama}`} placeholder="Keterangan (opsional)" editable={bolehIsi && !proses && !selesai.current} value={isian[s.id].keterangan}
                 onChangeText={(v) => setIsian((x) => ({ ...x, [s.id]: { ...x[s.id], keterangan: v } }))} />
             )}
           </View>
-        )), [terbuka, item.siswa, isian, bolehIsi, proses, pesan]);
+        );
   const tombolSimpan = bolehIsi && pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && (
         <Tombol judul={proses ? "Menyimpan…" : p ? "Simpan perubahan" : "Simpan absen & jurnal"} onPress={() => void simpan()} memuat={proses} nonaktif={item.siswa.length === 0} />
       );
 
   return (
-    <Layar>
+    <Daftar data={terbuka ? item.siswa : []} renderItem={barisSiswa} ListFooterComponent={terbuka && tombolSimpan || undefined}>
       <View>
         <Judul>{item.mapel.nama}</Judul>
         <T redup>Kelas {item.kelas.nama} · Jam ke-{item.jamMulai}{item.jamSelesai > item.jamMulai ? `–${item.jamSelesai}` : ""} · {item.waktu}</T>
@@ -235,9 +235,7 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
           setIsian(sebelum);
           setSebelum(null);
         }} /></>}
-        {daftar}
       </Kartu>}
-      {terbuka && tombolSimpan}
-    </Layar>
+    </Daftar>
   );
 }

@@ -7,7 +7,9 @@ import { useMuat } from "@/lib/muat";
 import { useSaya } from "@/lib/sesi";
 import type { ItemJurnal } from "@/lib/tipe";
 import { formatTanggal, tanggalDiZona } from "@/lib/waktu";
-import { Baris, Kartu, Layar, Lencana, Masukan, Memuat, NavTanggal, Pesan, T, Tombol } from "@/components/ui";
+import { Baris, Kartu, Daftar, Lencana, Masukan, Memuat, NavTanggal, Pesan, T, Tombol } from "@/components/ui";
+
+type IsianPeriksa = { catatan?: string; proses?: boolean; galat?: string | null };
 
 export default function Jurnal() {
   const { pengguna, zona } = useSaya();
@@ -20,9 +22,15 @@ export default function Jurnal() {
   const [hasil, setHasil] = useState("");
   const kepala = pengguna.peran === "KEPALA";
 
+  const [isian, setIsian] = useState<Record<string, IsianPeriksa>>({});
+  function ubah(id: string, nilai: IsianPeriksa) {
+    setIsian(lama => ({ ...lama, [id]: { ...lama[id], ...nilai } }));
+  }
+
   const belum = data?.jurnal.filter((j) => !j.diperiksa) ?? [];
   return (
-    <Layar segarkan={sibuk ? undefined : muat} memuat={memuat}>
+    <Daftar data={data?.jurnal ?? []} refreshing={memuat} onRefresh={sibuk ? undefined : muat}
+      renderItem={({ item: j }) => <KartuJurnal key={j.id} j={j} kepala={kepala && !sibuk} setelahUbah={muat} isian={isian[j.id]} ubah={nilai => ubah(j.id, nilai)} />}>
       <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={t => { if (!kunci.current) { setTanggal(t); setHasil(""); } }} />
       {memuat && <Memuat />}
       {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
@@ -50,25 +58,24 @@ export default function Jurnal() {
         }} />
       )}
       {data?.jurnal.length === 0 && <Kartu><T redup>Belum ada jurnal pada tanggal ini.</T></Kartu>}
-      {data?.jurnal.map((j) => <KartuJurnal key={j.id} j={j} kepala={kepala && !sibuk} setelahUbah={muat} />)}
-    </Layar>
+
+    </Daftar>
   );
 }
 
-function KartuJurnal({ j, kepala, setelahUbah }: { j: ItemJurnal; kepala: boolean; setelahUbah: () => void }) {
-  const [catatan, setCatatan] = useState("");
-  const [proses, setProses] = useState(false);
-  const [galat, setGalat] = useState<string | null>(null);
+function KartuJurnal({ j, kepala, setelahUbah, isian, ubah }: {
+  j: ItemJurnal; kepala: boolean; setelahUbah: () => void; isian?: IsianPeriksa; ubah: (nilai: IsianPeriksa) => void;
+}) {
+  const { catatan = "", proses, galat } = isian ?? {};
   async function periksa(batal = false) {
-    setProses(true);
-    setGalat(null);
+    ubah({ proses: true, galat: null });
     try {
       await minta("/api/m/jurnal", { body: { ids: [j.id], catatan: catatan.trim() || null, batal } });
       setelahUbah();
     } catch (e) {
-      setGalat(e instanceof Error ? e.message : "Gagal menyimpan.");
+      ubah({ galat: e instanceof Error ? e.message : "Gagal menyimpan." });
     } finally {
-      setProses(false);
+      ubah({ proses: false });
     }
   }
   return (
@@ -84,7 +91,7 @@ function KartuJurnal({ j, kepala, setelahUbah }: { j: ItemJurnal; kepala: boolea
       <T><T redup>Materi: </T>{j.materi}</T>
       {j.kd && <T><T redup>KD/tujuan: </T>{j.kd}</T>}
       {j.catatan && <T><T redup>Catatan: </T>{j.catatan}</T>}
-      <T ukuran={13}>H {j.rekap.H} · S {j.rekap.S} · I {j.rekap.I} · A {j.rekap.A}</T>
+      <T ukuran={13}>Hadir {j.rekap.H} · Sakit {j.rekap.S} · Izin {j.rekap.I} · Alpa {j.rekap.A}</T>
       {j.tidakHadir.length > 0 && <T redup ukuran={12}>{j.tidakHadir.map((a) => `${a.nama} (${a.status}${a.keterangan ? `: ${a.keterangan}` : ""})`).join(", ")}</T>}
       {j.catatanKepala && <Pesan jenis="info" teks={`Catatan kepala: ${j.catatanKepala}`} />}
       {galat && <Pesan jenis="galat" teks={galat} />}
@@ -92,7 +99,7 @@ function KartuJurnal({ j, kepala, setelahUbah }: { j: ItemJurnal; kepala: boolea
         <Tombol jenis="teks" judul="Batalkan tanda diperiksa" onPress={() => periksa(true)} memuat={proses} />
       ) : (
         <View style={{ gap: 8, marginTop: 4 }}>
-          <Masukan label="Catatan untuk guru (opsional)" value={catatan} onChangeText={setCatatan} />
+          <Masukan label="Catatan untuk guru (opsional)" value={catatan} onChangeText={catatan => ubah({ catatan })} />
           <Tombol judul="Sudah diperiksa" onPress={() => periksa()} memuat={proses} />
         </View>
       ))}
