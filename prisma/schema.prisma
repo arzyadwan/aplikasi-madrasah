@@ -1,0 +1,213 @@
+// Skema database Aplikasi Madrasah (tahap 1: kehadiran dan jurnal mengajar)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// ADMIN = TU / operator, KEPALA = kepala madrasah, GURU = guru (termasuk wali kelas)
+enum Peran {
+  ADMIN
+  KEPALA
+  GURU
+}
+
+/// Status kehadiran siswa per jam pelajaran
+enum StatusSiswa {
+  H // Hadir
+  S // Sakit
+  I // Izin
+  A // Alpa
+}
+
+/// Status kehadiran guru per hari
+enum StatusGuru {
+  HADIR
+  IZIN
+  SAKIT
+  DINAS
+}
+
+enum JenisKelamin {
+  L
+  P
+}
+
+model Pengguna {
+  id           String   @id @default(cuid())
+  nama         String
+  username     String   @unique
+  passwordHash String
+  peran        Peran    @default(GURU)
+  nip          String?
+  noHp         String?
+  aktif        Boolean  @default(true)
+  /// Naik setiap kali kata sandi diganti, agar sesi lama otomatis keluar
+  versiSesi    Int      @default(0)
+  dibuatPada   DateTime @default(now())
+  diubahPada   DateTime @updatedAt
+
+  kelasWali          Kelas[]       @relation("WaliKelas")
+  jadwal             Jadwal[]
+  pertemuanDiisi     Pertemuan[]   @relation("PengisiPertemuan")
+  pertemuanDiperiksa Pertemuan[]   @relation("PemeriksaPertemuan")
+  absensi            AbsensiGuru[]
+}
+
+model Kelas {
+  id          String    @id @default(cuid())
+  nama        String    @unique
+  tingkat     Int
+  waliKelasId String?
+  waliKelas   Pengguna? @relation("WaliKelas", fields: [waliKelasId], references: [id], onDelete: SetNull)
+
+  siswa     Siswa[]
+  jadwal    Jadwal[]
+  pertemuan Pertemuan[]
+}
+
+model Siswa {
+  id      String       @id @default(cuid())
+  nis     String?      @unique
+  nisn    String?
+  nama    String
+  jk      JenisKelamin
+  kelasId String?
+  kelas   Kelas?       @relation(fields: [kelasId], references: [id], onDelete: SetNull)
+  aktif   Boolean      @default(true)
+
+  absensi AbsensiSiswa[]
+
+  @@index([kelasId])
+}
+
+model Mapel {
+  id     String  @id @default(cuid())
+  nama   String  @unique
+  kode   String?
+  urutan Int     @default(0)
+
+  jadwal    Jadwal[]
+  pertemuan Pertemuan[]
+}
+
+/// Jam pelajaran ke-1, ke-2, dst. beserta waktunya (format "07:30")
+model JamPelajaran {
+  jamKe   Int    @id
+  mulai   String
+  selesai String
+}
+
+/// Jadwal pelajaran tetap. hari: 1 = Senin ... 6 = Sabtu
+model Jadwal {
+  id         String   @id @default(cuid())
+  hari       Int
+  jamMulai   Int
+  jamSelesai Int
+  kelasId    String
+  kelas      Kelas    @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  mapelId    String
+  mapel      Mapel    @relation(fields: [mapelId], references: [id], onDelete: Cascade)
+  guruId     String
+  guru       Pengguna @relation(fields: [guruId], references: [id], onDelete: Cascade)
+
+  pertemuan Pertemuan[]
+
+  @@index([hari, kelasId])
+  @@index([guruId])
+}
+
+/// Satu pertemuan = absen siswa + jurnal mengajar untuk satu jadwal pada satu tanggal
+model Pertemuan {
+  id          String    @id @default(cuid())
+  /// ID dari perangkat, mencegah data dobel saat antrean offline dikirim ulang
+  idKlien     String    @unique
+  tanggal     DateTime  @db.Date
+  jamMulai    Int
+  jamSelesai  Int
+  jadwalId    String?
+  jadwal      Jadwal?   @relation(fields: [jadwalId], references: [id], onDelete: SetNull)
+  kelasId     String
+  kelas       Kelas     @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  mapelId     String
+  mapel       Mapel     @relation(fields: [mapelId], references: [id], onDelete: Cascade)
+  /// Guru yang benar-benar mengisi (bisa guru pengganti)
+  guruId      String
+  guru        Pengguna  @relation("PengisiPertemuan", fields: [guruId], references: [id], onDelete: Cascade)
+  pengganti   Boolean   @default(false)
+
+  materi  String
+  kd      String?
+  catatan String?
+
+  /// Waktu pengisian menurut perangkat guru (untuk data yang diisi saat offline)
+  diisiDiPerangkat DateTime?
+  dibuatPada       DateTime  @default(now())
+  diubahPada       DateTime  @updatedAt
+
+  diperiksaOlehId String?
+  diperiksaOleh   Pengguna? @relation("PemeriksaPertemuan", fields: [diperiksaOlehId], references: [id], onDelete: SetNull)
+  diperiksaPada   DateTime?
+  catatanKepala   String?
+
+  absensi AbsensiSiswa[]
+
+  @@unique([jadwalId, tanggal])
+  @@index([tanggal])
+  @@index([kelasId, tanggal])
+  @@index([guruId, tanggal])
+}
+
+model AbsensiSiswa {
+  pertemuanId String
+  pertemuan   Pertemuan   @relation(fields: [pertemuanId], references: [id], onDelete: Cascade)
+  siswaId     String
+  siswa       Siswa       @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  status      StatusSiswa
+  keterangan  String?
+
+  @@id([pertemuanId, siswaId])
+  @@index([siswaId])
+}
+
+model AbsensiGuru {
+  id          String     @id @default(cuid())
+  idKlien     String     @unique
+  penggunaId  String
+  pengguna    Pengguna   @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+  tanggal     DateTime   @db.Date
+  status      StatusGuru
+  waktuMasuk  DateTime
+  lat         Float?
+  lng         Float?
+  akurasi     Float?
+  jarakMeter  Int?
+  dalamRadius Boolean?
+  fotoPath    String?
+  keterangan  String?
+
+  diisiDiPerangkat DateTime?
+  dibuatPada       DateTime  @default(now())
+
+  @@unique([penggunaId, tanggal])
+  @@index([tanggal])
+}
+
+/// Pengaturan madrasah (hanya satu baris, id = 1)
+model Pengaturan {
+  id            Int     @id @default(1)
+  namaMadrasah  String
+  alamat        String?
+  /// Titik lokasi madrasah untuk absen guru (GPS)
+  lat           Float?
+  lng           Float?
+  radiusMeter   Int     @default(150)
+  /// Tolak absen guru di luar radius. Jika false, absen tetap diterima tetapi ditandai.
+  tolakLuarRadius Boolean @default(false)
+  /// Batas waktu data offline boleh dikirim setelah diisi (jam)
+  batasSinkronJam Int     @default(72)
+}

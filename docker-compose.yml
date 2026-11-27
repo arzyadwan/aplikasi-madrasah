@@ -1,0 +1,61 @@
+# Menjalankan aplikasi di VPS:  docker compose up -d --build
+# Dengan HTTPS otomatis (wajib agar GPS di HP berfungsi):  DOMAIN=absen.contoh.sch.id docker compose --profile https up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: madrasah
+      POSTGRES_USER: madrasah
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di file .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U madrasah -d madrasah"]
+      interval: 5s
+      retries: 10
+
+  # Menjalankan migrasi database dan data awal (akun admin, mapel, kelas) lalu berhenti
+  migrate:
+    build: { context: ., target: builder }
+    environment:
+      DATABASE_URL: postgresql://madrasah:${POSTGRES_PASSWORD}@db:5432/madrasah
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://madrasah:${POSTGRES_PASSWORD}@db:5432/madrasah
+      SESSION_SECRET: ${SESSION_SECRET:?isi SESSION_SECRET di file .env}
+      APP_TZ: ${APP_TZ:-Asia/Makassar}
+      # isi "false" hanya bila belum memakai HTTPS (uji coba di jaringan lokal)
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+    volumes:
+      - uploads:/data/uploads
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-}
+    command: caddy reverse-proxy --from ${DOMAIN} --to app:3000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+    depends_on: [app]
+
+volumes:
+  db-data:
+  uploads:
+  caddy-data:
