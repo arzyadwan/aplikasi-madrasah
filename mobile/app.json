@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Madrasah",
+    "slug": "aplikasi-madrasah",
+    "version": "1.0.0",
+    "scheme": "madrasah",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "id.alikhlasamberi.madrasah",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#18734F",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        { "image": "./assets/splash-icon.png", "imageWidth": 160, "backgroundColor": "#18734F" }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Kamera dipakai untuk foto selfie saat absen guru.",
+          "microphonePermission": false,
+          "photosPermission": false
+        }
+      ],
+      [
+        "expo-location",
+        { "locationWhenInUsePermission": "Lokasi dipakai untuk mencatat absen guru di madrasah." }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "buildArchs": ["arm64-v8a", "armeabi-v7a"]
+          }
+        }
+      ]
+    ],
+    "experiments": { "typedRoutes": true },
+    "extra": {
+      "alamatServerBawaan": ""
+    }
+  }
+}
