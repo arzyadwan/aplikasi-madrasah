@@ -9,10 +9,14 @@ import { simpanJson } from "@/lib/penyimpanan";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_SISWA, type ItemJadwal, type ResponsHariIni, type StatusSiswa } from "@/lib/tipe";
 import { tanggalDiZona } from "@/lib/waktu";
-import { Baris, Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
+import { Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
 
 const URUTAN: StatusSiswa[] = ["H", "S", "I", "A"];
-const WARNA: Record<StatusSiswa, string> = { H: W.utama, S: "#0284c7", I: "#f59e0b", A: "#dc2626" };
+function akhiriKalimat(teks: string) {
+  const kalimat = teks.trimEnd();
+  return /[.!?]$/.test(kalimat) ? kalimat : kalimat + ".";
+}
+const WARNA: Record<StatusSiswa, string> = { H: W.utama, S: W.biru, I: W.kuning, A: W.merah };
 
 export default function IsiPertemuan() {
   const { jadwalId } = useLocalSearchParams<{ jadwalId: string }>();
@@ -88,9 +92,42 @@ function Form({ item, tanggal, offline }: { item: ItemJadwal; tanggal: string; o
   }
 
   async function simpan() {
-    if (pengganti && !(await konfirmasi("Guru pengganti", `Anda akan mengisi sebagai guru pengganti untuk ${item.guru.nama}.`))) return;
+    if (pengganti && !(await konfirmasi("Guru pengganti", akhiriKalimat(`Anda akan mengisi sebagai guru pengganti untuk ${item.guru.nama}`)))) return;
     await kirim();
   }
+
+  const [dibuka, setDibuka] = useState(false);
+  const [sebelum, setSebelum] = useState<typeof isian | null>(null);
+  const adaAbsen = rekap.H < item.siswa.length;
+  const terbuka = dibuka || adaAbsen;
+  const daftar = useMemo(() => terbuka && item.siswa.map((s, i) => (
+          <View key={s.id} style={{ borderTopWidth: i ? 1 : 0, borderColor: W.garis, paddingVertical: 8, gap: 6 }}>
+            <>
+              <T ukuran={14}><Text style={{ color: W.redup }}>{i + 1}. </Text>{s.nama}</T>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }} accessibilityRole="radiogroup">
+                {URUTAN.map((st) => {
+                  const pilih = isian[s.id].status === st;
+                  return (
+                    <Pressable key={st} disabled={!bolehIsi} accessibilityRole="radio" accessibilityState={{ checked: pilih }}
+                      accessibilityLabel={`${s.nama} ${LABEL_STATUS_SISWA[st]}`}
+                      onPress={() => setIsian((x) => ({ ...x, [s.id]: { status: st, keterangan: st === "H" ? "" : x[s.id].keterangan } }))}
+                      style={{ minWidth: 48, minHeight: 48, borderRadius: 9, borderWidth: 1, alignItems: "center", justifyContent: "center",
+                        borderColor: pilih ? WARNA[st] : W.garis, backgroundColor: pilih ? WARNA[st] : W.putih }}>
+                      <Text style={{ fontWeight: pilih ? "900" : "400", color: pilih ? W.putih : W.redup }}>{st}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+            {isian[s.id].status !== "H" && (
+              <Masukan label={`Keterangan ${s.nama}`} sembunyikanLabel placeholder="Keterangan (opsional)" editable={bolehIsi} value={isian[s.id].keterangan}
+                onChangeText={(v) => setIsian((x) => ({ ...x, [s.id]: { ...x[s.id], keterangan: v } }))} />
+            )}
+          </View>
+        )), [terbuka, item.siswa, isian, bolehIsi]);
+  const tombolSimpan = bolehIsi && pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && (
+        <Tombol judul={proses ? "Menyimpan…" : p ? "Simpan perubahan" : "Simpan absen & jurnal"} onPress={() => void simpan()} memuat={proses} nonaktif={item.siswa.length === 0} />
+      );
 
   return (
     <Layar>
@@ -99,47 +136,20 @@ function Form({ item, tanggal, offline }: { item: ItemJadwal; tanggal: string; o
         <T redup>Kelas {item.kelas.nama} · Jam ke-{item.jamMulai}{item.jamSelesai > item.jamMulai ? `–${item.jamSelesai}` : ""} · {item.waktu}</T>
       </View>
       {offline && <Pesan jenis="antre" teks="Sedang offline. Isian akan disimpan di HP lalu dikirim otomatis." />}
-      {pengganti && <Pesan jenis="info" teks={`Jadwal ${item.guru.nama}. Anda mengisi sebagai guru pengganti.`} />}
-      {p && <Pesan jenis="ok" teks={`Sudah diisi oleh ${p.namaGuru}${p.pengganti ? " (pengganti)" : ""}.${p.diperiksa ? " Sudah diperiksa kepala madrasah." : bisaUbah ? " Anda masih bisa mengubahnya hari ini." : ""}`} />}
+      {pengganti && <Pesan jenis="info" teks={akhiriKalimat(`Jadwal ${item.guru.nama}`) + (bolehIsi ? " Anda mengisi sebagai guru pengganti." : "")} />}
+      {p && <Pesan jenis="ok" teks={akhiriKalimat(`Sudah diisi oleh ${p.namaGuru}${p.pengganti ? " (pengganti)" : ""}`) + (bolehIsi ? " Anda masih bisa mengubahnya hari ini." : "")} />}
 
       <Kartu>
-        <Baris>
-          <Judul kecil>Kehadiran siswa</Judul>
-          {bolehIsi && (
-            <Pressable onPress={() => setIsian((s) => Object.fromEntries(Object.keys(s).map((k) => [k, { status: "H" as StatusSiswa, keterangan: "" }])))}>
-              <T tebal style={{ color: W.utama }} ukuran={14}>Semua hadir</T>
-            </Pressable>
-          )}
-        </Baris>
-        <T redup ukuran={13}>Hadir {rekap.H} · Sakit {rekap.S} · Izin {rekap.I} · Alpa {rekap.A}</T>
-        {item.siswa.map((s, i) => (
-          <View key={s.id} style={{ borderTopWidth: i ? 1 : 0, borderColor: "#f1f5f9", paddingVertical: 8, gap: 6 }}>
-            <Baris>
-              <T style={{ flex: 1 }} ukuran={14}><Text style={{ color: "#94a3b8" }}>{i + 1}. </Text>{s.nama}</T>
-              <View style={{ flexDirection: "row", gap: 4 }} accessibilityRole="radiogroup">
-                {URUTAN.map((st) => {
-                  const pilih = isian[s.id].status === st;
-                  return (
-                    <Pressable key={st} disabled={!bolehIsi} accessibilityRole="radio" accessibilityState={{ checked: pilih }}
-                      accessibilityLabel={`${s.nama} ${LABEL_STATUS_SISWA[st]}`}
-                      onPress={() => setIsian((x) => ({ ...x, [s.id]: { status: st, keterangan: st === "H" ? "" : x[s.id].keterangan } }))}
-                      style={{ width: 38, height: 38, borderRadius: 9, borderWidth: 1, alignItems: "center", justifyContent: "center",
-                        borderColor: pilih ? WARNA[st] : "#cbd5e1", backgroundColor: pilih ? WARNA[st] : W.putih }}>
-                      <Text style={{ fontWeight: "800", color: pilih ? W.putih : W.redup }}>{st}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Baris>
-            {isian[s.id].status !== "H" && (
-              <Masukan label={`Keterangan ${s.nama}`} sembunyikanLabel placeholder="Keterangan (opsional)" editable={bolehIsi} value={isian[s.id].keterangan}
-                onChangeText={(v) => setIsian((x) => ({ ...x, [s.id]: { ...x[s.id], keterangan: v } }))} />
-            )}
-          </View>
-        ))}
-        {item.siswa.length === 0 && <T redup>Belum ada siswa di kelas ini.</T>}
+        <Judul kecil>Kehadiran siswa</Judul>
+        <T>{rekap.H} hadir · {rekap.S} sakit · {rekap.I} izin · {rekap.A} alpa</T>
       </Kartu>
-
+      {!bolehIsi && <Pesan jenis="info" teks={
+        p?.diperiksa ? "Jurnal sudah diperiksa kepala madrasah, jadi tidak bisa diubah lagi."
+        : tanggal < hariIni ? "Jadwal ini sudah lewat harinya, jadi tidak bisa diisi atau diubah lagi."
+        : tanggal > hariIni ? "Jadwal ini belum tiba. Jurnal hanya bisa diisi pada hari yang dijadwalkan."
+        : pengguna.peran === "ADMIN" ? "Admin hanya bisa melihat jurnal ini."
+        : "Jurnal ini sudah diisi oleh guru lain. Hanya guru yang mengisinya yang bisa mengubahnya."
+      } />}
       <Kartu style={{ gap: 12 }}>
         <Judul kecil>Jurnal mengajar</Judul>
         <Masukan label="Materi yang diajarkan *" value={materi} onChangeText={setMateri} editable={bolehIsi} multiline />
@@ -148,10 +158,23 @@ function Form({ item, tanggal, offline }: { item: ItemJadwal; tanggal: string; o
       </Kartu>
 
       {pesan && <Pesan jenis={pesan.jenis} teks={pesan.teks} />}
-      {bolehIsi && pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && (
-        <Tombol judul={proses ? "Menyimpan…" : p ? "Simpan perubahan" : "Simpan absen & jurnal"} onPress={() => void simpan()} memuat={proses} nonaktif={item.siswa.length === 0} />
-      )}
+      {tombolSimpan}
       {pesan?.jenis === "antre" && <Tombol jenis="garis" judul="Kembali ke jadwal" onPress={() => router.back()} />}
+      {item.siswa.length === 0 ? <T redup>Belum ada siswa di kelas ini.</T> : <Kartu>
+        {adaAbsen ? <Judul kecil>Kehadiran per siswa</Judul> :
+          <Tombol jenis="garis" judul={terbuka ? "Tutup daftar siswa" : `${bolehIsi ? "Ubah" : "Lihat"} kehadiran siswa (${item.siswa.length})`} onPress={() => { setDibuka(!dibuka); setSebelum(null); }} />}
+        {bolehIsi && adaAbsen && <Tombol jenis="garis" judul="Semua hadir" onPress={() => {
+          setSebelum(isian);
+          setDibuka(false);
+          setIsian(Object.fromEntries(item.siswa.map(s => [s.id, { status: "H", keterangan: "" }])));
+        }} />}
+        {sebelum && <><T>Semua siswa ditandai hadir.</T><Tombol jenis="teks" judul="Urungkan" onPress={() => {
+          setIsian(sebelum);
+          setSebelum(null);
+        }} /></>}
+        {daftar}
+      </Kartu>}
+      {terbuka && tombolSimpan}
     </Layar>
   );
 }

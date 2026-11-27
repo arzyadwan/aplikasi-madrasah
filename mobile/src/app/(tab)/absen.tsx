@@ -64,6 +64,7 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
   const [status, setStatus] = useState<StatusGuru>("HADIR");
   const [lokasi, setLokasi] = useState<Lokasi | null>(null);
   const [galatLokasi, setGalatLokasi] = useState<string | null>(null);
+  const [petunjukIzin, setPetunjukIzin] = useState<string | null>(null);
   const [mencari, setMencari] = useState(false);
   const [foto, setFoto] = useState<string | null>(null);
   const [keterangan, setKeterangan] = useState("");
@@ -78,20 +79,42 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
     }).catch(() => {});
   }, []);
 
-  async function ambilLokasi() {
+  const [percobaan, setPercobaan] = useState(0);
+  useEffect(() => {
+    if (status !== "HADIR") return;
+    let aktif = true;
+    let batas: ReturnType<typeof setTimeout> | undefined;
+    setLokasi(null);
     setMencari(true);
     setGalatLokasi(null);
-    try {
-      const izin = await Location.requestForegroundPermissionsAsync();
-      if (!izin.granted) { setGalatLokasi("Izin lokasi ditolak. Aktifkan izin lokasi untuk aplikasi ini di pengaturan HP."); return; }
-      const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setLokasi({ lat: p.coords.latitude, lng: p.coords.longitude, akurasi: Math.round(p.coords.accuracy ?? 0) });
-    } catch {
-      setGalatLokasi("Lokasi belum didapat. Pastikan GPS aktif lalu coba lagi.");
-    } finally {
-      setMencari(false);
+    setPetunjukIzin(null);
+    async function cari() {
+      try {
+        const izin = percobaan ? await Location.requestForegroundPermissionsAsync() : await Location.getForegroundPermissionsAsync();
+        if (!aktif) return;
+        if (!izin.granted) {
+          setPetunjukIzin(izin.canAskAgain
+            ? "ketuk Ambil lokasi lalu izinkan akses lokasi"
+            : "aktifkan izin lokasi aplikasi di pengaturan HP, lalu ketuk Ambil lokasi");
+          return;
+        }
+        batas = setTimeout(() => {
+          aktif = false;
+          setMencari(false);
+          setGalatLokasi("Lokasi belum ditemukan dalam 20 detik. Pastikan GPS aktif lalu coba lagi.");
+        }, 20000);
+        const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        if (aktif) setLokasi({ lat: p.coords.latitude, lng: p.coords.longitude, akurasi: Math.round(p.coords.accuracy ?? 0) });
+      } catch {
+        if (aktif) setGalatLokasi("Lokasi belum didapat. Pastikan GPS aktif lalu coba lagi.");
+      } finally {
+        clearTimeout(batas);
+        if (aktif) setMencari(false);
+      }
     }
-  }
+    void cari();
+    return () => { aktif = false; clearTimeout(batas); };
+  }, [status, percobaan]);
 
   async function ambilFoto() {
     try {
@@ -136,7 +159,7 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
         <View style={{ flexDirection: "row", gap: 6 }}>
           {(Object.keys(LABEL_STATUS_GURU) as StatusGuru[]).map((s) => (
             <Pressable key={s} accessibilityRole="radio" accessibilityState={{ checked: status === s }} accessibilityLabel={LABEL_STATUS_GURU[s]}
-              onPress={() => setStatus(s)}
+              onPress={() => { if (s !== status) { setPercobaan(0); setStatus(s); } }}
               style={{ flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center",
                 borderColor: status === s ? W.utama : "#cbd5e1", backgroundColor: status === s ? W.utama : W.putih }}>
               <Text style={{ fontWeight: "700", fontSize: 13, color: status === s ? W.putih : W.teks }}>{LABEL_STATUS_GURU[s]}</Text>
@@ -151,7 +174,7 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
             <T tebal>1. Lokasi</T>
             {lokasi && <T redup>Lokasi didapat (akurasi ±{lokasi.akurasi} m).{jarak != null ? ` Jarak ke madrasah ±${jarak} m${jarak > madrasah.radiusMeter ? " (di luar area)" : ""}.` : ""}</T>}
             {galatLokasi && <T style={{ color: W.merah }}>{galatLokasi}</T>}
-            <Tombol jenis="garis" judul={mencari ? "Mencari lokasi…" : lokasi ? "Perbarui lokasi" : "Ambil lokasi"} onPress={ambilLokasi} memuat={mencari} />
+            <Tombol jenis="garis" judul={mencari ? "Mencari lokasi…" : galatLokasi ? "Coba lokasi lagi" : lokasi ? "Perbarui lokasi" : "Ambil lokasi"} onPress={() => setPercobaan(n => n + 1)} memuat={mencari} />
           </View>
           <View style={{ backgroundColor: W.latar, borderRadius: 10, padding: 12, gap: 6 }}>
             <T tebal>2. Foto selfie</T>
@@ -164,9 +187,10 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
           placeholder={status === "DINAS" ? "Contoh: rapat KKM di Kemenag Konawe" : "Contoh: demam"} />
       )}
 
+      {status === "HADIR" ? <View><T>Lokasi: {mencari ? "mencari..." : lokasi ? "siap" : petunjukIzin ?? "belum"}</T><T>Selfie: {foto ? "siap" : "belum"}</T></View> : !keterangan.trim() && <T>Keterangan: belum diisi</T>}
       {pesan && <Pesan jenis={pesan.jenis} teks={pesan.teks} />}
       {pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && (
-        <Tombol judul={proses ? "Mengirim…" : "Kirim absen"} onPress={kirim} memuat={proses} />
+        <Tombol judul={proses ? "Mengirim…" : "Kirim absen"} nonaktif={status === "HADIR" ? mencari || !lokasi || !foto : !keterangan.trim()} onPress={kirim} memuat={proses} />
       )}
     </Kartu>
   );

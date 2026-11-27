@@ -1,4 +1,6 @@
 import { type PropsWithChildren, type ReactNode } from "react";
+import { useSegments } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
@@ -12,10 +14,12 @@ export const W = {
 };
 
 export function Layar({ children, segarkan, memuat }: PropsWithChildren<{ segarkan?: () => void; memuat?: boolean }>) {
+  const { bottom } = useSafeAreaInsets();
+  const [grup] = useSegments();
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: W.latar }}
-      contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+      contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 16 + (grup === "(tab)" ? 0 : bottom) }}
       keyboardShouldPersistTaps="handled"
       refreshControl={segarkan ? <RefreshControl refreshing={!!memuat} onRefresh={segarkan} colors={[W.utama]} /> : undefined}
     >
