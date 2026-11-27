@@ -1,15 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { View } from "react-native";
 import { useMuat } from "@/lib/muat";
 import { useSaya } from "@/lib/sesi";
-import type { ResponsWali, StatusSiswa } from "@/lib/tipe";
+import { LABEL_STATUS_SISWA, type ResponsWali } from "@/lib/tipe";
 import { formatTanggal, tanggalDiZona } from "@/lib/waktu";
-import { Baris, Judul, Kartu, Layar, Lencana, Memuat, NavTanggal, Pesan, T, Tombol, W } from "@/components/ui";
-
-const WARNA: Record<StatusSiswa, [string, string]> = {
-  H: ["transparent", W.utama], S: [W.biruMuda, W.biru], I: [W.kuningMuda, W.kuning], A: [W.merahMuda, W.merah],
-};
+import { Judul, Kartu, Layar, Lencana, Memuat, NavTanggal, Pesan, T, Tombol, W } from "@/components/ui";
 
 export default function KelasSaya() {
   const { pengguna: u, zona } = useSaya();
@@ -18,12 +14,15 @@ export default function KelasSaya() {
   const [kelasId, setKelasId] = useState(u.kelasWali[0]?.id ?? "");
   const { data, galat, memuat, muat } = useMuat<ResponsWali>(`/api/m/wali?kelas=${kelasId}&tanggal=${tanggal}`);
 
+  const [jadwalId, setJadwalId] = useState("");
+  const jam = data?.jadwal.find(j => j.id === jadwalId) ?? data?.jadwal[0];
+
   return (
     <Layar segarkan={muat} memuat={memuat}>
       <Judul>Kelas {data?.kelas.nama ?? ""}</Judul>
       {u.kelasWali.length > 1 && (
         <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-          {u.kelasWali.map((k) => <Tombol key={k.id} jenis={k.id === kelasId ? "utama" : "garis"} judul={k.nama} onPress={() => setKelasId(k.id)} />)}
+          {u.kelasWali.map((k) => <Tombol key={k.id} terpilih={k.id === kelasId} jenis={k.id === kelasId ? "utama" : "garis"} judul={k.nama} onPress={() => setKelasId(k.id)} />)}
         </View>
       )}
       <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={setTanggal} />
@@ -39,38 +38,28 @@ export default function KelasSaya() {
               <T tebal>{j.mapel.nama}</T>
               <T redup>{j.guru.nama}</T>
               {j.pertemuan ? (
-                <T ukuran={13}>Diisi {j.pertemuan.namaGuru}{j.pertemuan.pengganti ? " (pengganti)" : ""} · H {j.pertemuan.rekap.H} · S {j.pertemuan.rekap.S} · I {j.pertemuan.rekap.I} · A {j.pertemuan.rekap.A}</T>
+                <T ukuran={13}>Diisi {j.pertemuan.namaGuru}{j.pertemuan.pengganti ? " (pengganti)" : ""} · Hadir {j.pertemuan.rekap.H} · Sakit {j.pertemuan.rekap.S} · Izin {j.pertemuan.rekap.I} · Alpa {j.pertemuan.rekap.A}</T>
               ) : tanggal === hariIni ? (
-                <Tombol jenis="teks" judul="Belum diisi · isi sebagai wali kelas" onPress={() => router.push({ pathname: "/isi/[jadwalId]", params: { jadwalId: j.id } })} />
+                <Tombol jenis="teks" judul={j.guru.id === u.id ? "Isi jadwal saya" : "Isi sebagai guru pengganti"} onPress={() => router.push({ pathname: "/isi/[jadwalId]", params: { jadwalId: j.id } })} />
               ) : <Lencana teks="Tidak diisi" jenis="merah" />}
             </Kartu>
           ))}
 
-          {data.jadwal.length > 0 && (
+          {jam && (
             <Kartu>
               <Judul kecil>Kehadiran per jam pelajaran</Judul>
-              <ScrollView horizontal>
-                <View>
-                  <Baris style={{ justifyContent: "flex-start", gap: 0 }}>
-                    <Text style={{ width: 150, fontWeight: "700", color: W.redup, fontSize: 12 }}>Siswa</Text>
-                    {data.jadwal.map((j) => <Text key={j.id} style={{ width: 44, textAlign: "center", fontWeight: "700", color: W.redup, fontSize: 12 }}>Jam {j.jamMulai}</Text>)}
-                  </Baris>
-                  {data.siswa.map((s) => (
-                    <Baris key={s.id} style={{ justifyContent: "flex-start", gap: 0, paddingVertical: 4, borderTopWidth: 1, borderColor: "#f1f5f9" }}>
-                      <Text numberOfLines={1} style={{ width: 150, fontSize: 13, color: W.teks }}>{s.nama}</Text>
-                      {data.jadwal.map((j) => {
-                        const st = data.status[s.id]?.[j.id];
-                        return (
-                          <View key={j.id} style={{ width: 44, alignItems: "center" }}>
-                            <Text style={{ fontWeight: "800", fontSize: 12, paddingHorizontal: 6, borderRadius: 4,
-                              backgroundColor: st ? WARNA[st][0] : "transparent", color: st ? WARNA[st][1] : "#cbd5e1" }}>{st ?? "·"}</Text>
-                          </View>
-                        );
-                      })}
-                    </Baris>
-                  ))}
-                </View>
-              </ScrollView>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {data.jadwal.map(j => <Tombol key={j.id} terpilih={jam.id === j.id} judul={`Jam ${j.jamMulai}`} jenis={jam.id === j.id ? "utama" : "garis"} onPress={() => setJadwalId(j.id)} />)}
+              </View>
+              <T tebal>Jam ke-{jam.jamMulai} · {jam.mapel.nama}</T>
+              {data.siswa.map(s => {
+                const kode = data.status[s.id]?.[jam.id];
+                const status = kode ? LABEL_STATUS_SISWA[kode] : "Belum diisi";
+                return <View key={s.id} accessible accessibilityLabel={`${s.nama}, jam ke-${jam.jamMulai}, ${status}`}
+                  style={{ borderTopWidth: 1, borderColor: W.garis, paddingVertical: 6 }}>
+                  <T tebal>{s.nama}</T><T>{status}</T>
+                </View>;
+              })}
             </Kartu>
           )}
           <T redup ukuran={12}>Rekap bulanan (Excel) bisa diunduh dari versi web, menu Kelas Saya.</T>

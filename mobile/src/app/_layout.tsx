@@ -9,7 +9,6 @@ SplashScreen.preventAutoHideAsync();
 export default function Akar() {
   return (
     <PenyediaSesi>
-      <StatusBar style="light" />
       <Navigasi />
     </PenyediaSesi>
   );
@@ -21,6 +20,7 @@ function Navigasi() {
   SplashScreen.hide();
   const login = !!token && !!saya;
   return (
+    <><StatusBar style={login ? "light" : "dark"} />
     <Stack screenOptions={{
       headerStyle: { backgroundColor: W.utamaTua }, headerTintColor: W.putih, headerTitleStyle: { fontWeight: "700" },
       headerRight: () => <StatusSinkron />,
@@ -35,6 +35,6 @@ function Navigasi() {
       <Stack.Protected guard={!login}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
       </Stack.Protected>
-    </Stack>
+    </Stack></>
   );
 }

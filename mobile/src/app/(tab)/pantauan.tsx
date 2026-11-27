@@ -36,7 +36,7 @@ export default function Pantauan() {
             <Angka judul="Guru sudah absen" nilai={`${p.guru.sudahAbsen}/${p.guru.total}`} sub={`${p.guru.hadir} hadir${p.guru.luarRadius ? ` · ${p.guru.luarRadius} di luar area` : ""}`} />
             <Angka judul="Jurnal terisi" nilai={`${p.jadwal.terisi}/${p.jadwal.total}`} sub={p.jadwal.total ? `${Math.round((p.jadwal.terisi / p.jadwal.total) * 100)}% jadwal` : "tidak ada jadwal"} />
             <Angka judul="Kehadiran siswa" nilai={p.siswa.persenHadir == null ? "–" : `${p.siswa.persenHadir}%`} sub="dari jam yang sudah diabsen" />
-            <Angka judul="Belum diperiksa" nilai={String(p.jadwal.belumDiperiksa)} warna={p.jadwal.belumDiperiksa ? "#d97706" : undefined} sub="jurnal" />
+            <Angka judul="Belum diperiksa" nilai={String(p.jadwal.belumDiperiksa)} warna={p.jadwal.belumDiperiksa ? W.kuning : undefined} sub="jurnal" />
           </View>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}><Tombol judul="Periksa jurnal" onPress={() => router.push({ pathname: "/jurnal", params: { tanggal } })} /></View>
@@ -76,7 +76,7 @@ export default function Pantauan() {
                   <T tebal>{k.nama}</T>
                   <T redup ukuran={12}>Jurnal {k.terisi}/{k.jadwal}</T>
                 </Baris>
-                <T ukuran={13}>H {k.rekap.H} · S {k.rekap.S} · I {k.rekap.I} · <T ukuran={13} tebal style={{ color: k.rekap.A ? W.merah : W.teks }}>A {k.rekap.A}</T></T>
+                <T ukuran={13}>Hadir {k.rekap.H} · Sakit {k.rekap.S} · Izin {k.rekap.I} · <T ukuran={13} tebal style={{ color: k.rekap.A ? W.merah : W.teks }}>Alpa {k.rekap.A}</T></T>
                 {k.tidakHadir.length > 0 && <T redup ukuran={12}>{k.tidakHadir.map((s) => `${s.nama}: ${s.status.join(", ")}`).join("; ")}</T>}
               </View>
             ))}

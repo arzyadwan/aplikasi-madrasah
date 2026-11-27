@@ -38,7 +38,7 @@ export default function Login() {
             <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: W.utama, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: W.putih, fontSize: 30, fontWeight: "800" }}>M</Text>
             </View>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: "#0f172a" }}>Aplikasi Madrasah</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: W.teks }}>Aplikasi Madrasah</Text>
             <T redup>Kehadiran dan jurnal mengajar</T>
           </View>
           <Kartu style={{ gap: 14, padding: 18 }}>
