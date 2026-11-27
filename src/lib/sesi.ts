@@ -1,6 +1,6 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const NAMA_COOKIE = "sesi_madrasah";
 const MASA_BERLAKU_HARI = 30;
@@ -15,12 +15,17 @@ function kunci() {
 
 export type IsiSesi = { uid: string; v: number };
 
-export async function buatSesi(isi: IsiSesi) {
-  const token = await new SignJWT(isi)
+/** Token JWT: dipakai sebagai cookie (web) atau header Authorization: Bearer (aplikasi HP) */
+export async function buatToken(isi: IsiSesi, hari = MASA_BERLAKU_HARI): Promise<string> {
+  return new SignJWT(isi)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${MASA_BERLAKU_HARI}d`)
+    .setExpirationTime(`${hari}d`)
     .sign(kunci());
+}
+
+export async function buatSesi(isi: IsiSesi) {
+  const token = await buatToken(isi);
   (await cookies()).set(NAMA_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -31,7 +36,9 @@ export async function buatSesi(isi: IsiSesi) {
 }
 
 export async function bacaSesi(): Promise<IsiSesi | null> {
-  const token = (await cookies()).get(NAMA_COOKIE)?.value;
+  const auth = (await headers()).get("authorization");
+  const bearer = auth?.startsWith("Bearer ") ? auth.slice(7).trim() : null;
+  const token = bearer || (await cookies()).get(NAMA_COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, kunci(), { algorithms: ["HS256"] });
