@@ -8,6 +8,8 @@ import { useSyncExternalStore } from "react";
 import { GalatJaringan, GalatServer, minta } from "./api";
 import { bacaJson, simpanJson } from "./penyimpanan";
 
+import type { ItemJadwal } from "./tipe";
+
 export type ItemAntrean = {
   id: string;
   path: string;
@@ -15,6 +17,9 @@ export type ItemAntrean = {
   label: string;
   dibuat: string;
   galat?: string;
+  alasanTunda?: string;
+  jadwal?: ItemJadwal;
+  dikoreksi?: boolean;
 };
 
 const KUNCI = "antrean_v1";
@@ -25,12 +30,14 @@ const pendengar = new Set<() => void>();
 function beriTahu() { pendengar.forEach((f) => f()); }
 
 async function simpan(baru: ItemAntrean[]) {
+  await simpanJson(KUNCI, baru);
   daftar = baru;
-  await simpanJson(KUNCI, daftar);
   beriTahu();
 }
 
 export async function muatAntrean() {
+  if (siap) return;
+  buktiAbsen = await bacaJson<string>("bukti_absen_v1");
   daftar = (await bacaJson<ItemAntrean[]>(KUNCI)) ?? [];
   siap = true;
   beriTahu();
@@ -48,56 +55,115 @@ export function useAntrean(): ItemAntrean[] {
 
 export function idBaru(): string { return Crypto.randomUUID(); }
 
-export async function hapusDariAntrean(id: string) {
-  await simpan(daftar.filter((x) => x.id !== id));
+// Satu operasi per giliran agar pengiriman otomatis dan koreksi tidak saling menimpa.
+let giliran = Promise.resolve();
+function urut<T>(kerja: () => Promise<T>) {
+  const hasil = giliran.then(kerja);
+  giliran = hasil.then(() => {}, () => {});
+  return hasil;
 }
 
-export async function kosongkanAntrean() { await simpan([]); }
+let buktiAbsen: string | null = null;
+let terakhir = "";
+export function useBuktiAbsen() {
+  return useSyncExternalStore(langganan, () => buktiAbsen, () => buktiAbsen);
+}
+function langganan(cb: () => void) { pendengar.add(cb); return () => { pendengar.delete(cb); }; }
+export function useTerkirim() {
+  return useSyncExternalStore(langganan, () => terakhir, () => terakhir);
+}
+export function hapusDariAntrean(id: string) {
+  return urut(() => simpan(daftar.filter(x => x.id !== id)));
+}
+export function kosongkanAntrean() {
+  return urut(async () => {
+    await simpanJson("bukti_absen_v1", null);
+    buktiAbsen = null;
+    terakhir = "";
+    await simpan([]);
+  });
+}
+
+// Saat token kedaluwarsa, pindahkan antrean bersama bukti ke ruang akun yang sama.
+export function titipAntrean(akun: string) {
+  return urut(async () => {
+    if (daftar.length || buktiAbsen) await simpanJson(akun, { daftar, buktiAbsen });
+    await simpanJson("bukti_absen_v1", null);
+    buktiAbsen = null;
+    terakhir = "";
+    await simpan([]);
+  });
+}
+export function pulihkanAntrean(akun: string) {
+  return urut(async () => {
+    const titipan = await bacaJson<{ daftar: ItemAntrean[]; buktiAbsen: string | null }>(akun);
+    if (!titipan) return;
+    await simpanJson("bukti_absen_v1", titipan.buktiAbsen);
+    buktiAbsen = titipan.buktiAbsen;
+    await simpan(titipan.daftar);
+    await simpanJson(akun, null);
+  });
+}
 
 export type HasilKirim =
   | { status: "terkirim"; data: Record<string, unknown> }
-  | { status: "diantre" }
+  | { status: "diantre"; pesan: string }
   | { status: "ditolak"; pesan: string };
 
-/** Coba kirim; bila offline atau server sedang bermasalah, simpan ke antrean. */
-export async function kirimAtauAntre(path: string, body: Record<string, unknown>, label: string): Promise<HasilKirim> {
+async function kirim(item: ItemAntrean): Promise<HasilKirim> {
+  let data;
   try {
-    const data = await minta<Record<string, unknown>>(path, { body, timeoutMs: 30000 });
-    return { status: "terkirim", data };
+    data = await minta<Record<string, unknown>>(item.path, { body: item.body, timeoutMs: 30000 });
   } catch (e) {
-    if (e instanceof GalatServer && e.status < 500 && e.status !== 0) return { status: "ditolak", pesan: e.message };
-    if (!siap) await muatAntrean();
-    await simpan([...daftar, { id: idBaru(), path, body, label, dibuat: new Date().toISOString() }]);
-    return { status: "diantre" };
+    const pesan = e instanceof Error ? e.message : "Gagal mengirim.";
+    if ((e instanceof GalatServer && e.status === 401) || e instanceof GalatJaringan || (e instanceof GalatServer && e.status >= 500)) {
+      await simpan(daftar.map(x => x.id === item.id ? { ...item, alasanTunda: pesan } : x));
+      return { status: "diantre", pesan };
+    }
+    await simpan(daftar.map(x => x.id === item.id ? { ...item, galat: pesan } : x));
+    return { status: "ditolak", pesan };
   }
+  if (item.dikoreksi && data.ulang === true) {
+    const pesan = "Versi sebelumnya sudah terkirim. Periksa kembali koreksi ini.";
+    await simpan(daftar.map(x => x.id === item.id ? { ...item, body: { ...item.body, idKlien: idBaru() }, dikoreksi: false, galat: pesan } : x));
+    return { status: "ditolak", pesan };
+  }
+  if (item.path === "/api/absen-guru") {
+    const tanggal = String(item.body.tanggal);
+    if (!buktiAbsen || tanggal > buktiAbsen) {
+      await simpanJson("bukti_absen_v1", tanggal);
+      buktiAbsen = tanggal;
+    }
+  }
+  terakhir = item.label;
+  await simpan(daftar.filter(x => x.id !== item.id));
+  return { status: "terkirim", data };
+}
+
+export function kirimAtauAntre(path: string, body: Record<string, unknown>, label: string, sumber?: string, jadwal?: ItemJadwal): Promise<HasilKirim> {
+  return urut(async () => {
+    await muatAntrean();
+    const lama = sumber ? daftar.find(x => x.id === sumber) : [...daftar].reverse().find(x => x.path === path && x.body.tanggal === body.tanggal && x.body.jadwalId === body.jadwalId);
+    if (sumber && lama?.id !== sumber) return { status: "ditolak" as const, pesan: "Antrean sudah berubah. Buka kembali isian untuk memperbarui data." };
+    if (lama) body = { ...body, idKlien: lama.body.idKlien, diisiDiPerangkat: lama.body.diisiDiPerangkat };
+    const dikoreksi = lama && (lama.dikoreksi || JSON.stringify(lama.body) !== JSON.stringify(body));
+    const item = { dikoreksi, jadwal: jadwal ?? lama?.jadwal, id: lama?.id ?? idBaru(), dibuat: lama?.dibuat ?? new Date().toISOString(), path, body, label };
+    await simpan(lama ? daftar.map(x => x.id === lama.id ? item : x) : [...daftar, item]);
+    return kirim(item);
+  });
 }
 
 let sedangSinkron = false;
-
-/** Kirim semua isi antrean. Berhenti bila masih offline. */
-export async function sinkronkan(): Promise<{ terkirim: number; ditolak: number }> {
-  if (sedangSinkron) return { terkirim: 0, ditolak: 0 };
+export async function sinkronkan() {
+  if (sedangSinkron) return;
   sedangSinkron = true;
-  let terkirim = 0;
-  let ditolak = 0;
   try {
-    if (!siap) await muatAntrean();
-    for (const item of [...daftar]) {
-      if (item.galat) continue;
-      try {
-        await minta(item.path, { body: item.body, timeoutMs: 30000 });
-        await simpan(daftar.filter((x) => x.id !== item.id));
-        terkirim++;
-      } catch (e) {
-        if (e instanceof GalatJaringan) break;
-        if (e instanceof GalatServer && (e.status >= 500 || e.status === 401 || e.status === 0)) break;
-        const pesan = e instanceof Error ? e.message : "Ditolak server";
-        await simpan(daftar.map((x) => (x.id === item.id ? { ...x, galat: pesan } : x)));
-        ditolak++;
-      }
+    for (const { id } of daftar.filter(x => !x.galat)) {
+      const hasil = await urut(async () => {
+        const item = daftar.find(x => x.id === id && !x.galat);
+        if (item) return kirim(item);
+      });
+      if (hasil?.status === "diantre") break;
     }
-  } finally {
-    sedangSinkron = false;
-  }
-  return { terkirim, ditolak };
+  } finally { sedangSinkron = false; }
 }

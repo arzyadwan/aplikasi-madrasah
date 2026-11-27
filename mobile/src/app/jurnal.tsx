@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { konfirmasi } from "@/lib/konfirmasi";
+import { useRef, useState } from "react";
 import { View } from "react-native";
 import { minta } from "@/lib/api";
 import { useMuat } from "@/lib/muat";
@@ -14,23 +15,42 @@ export default function Jurnal() {
   const awal = useLocalSearchParams<{ tanggal?: string }>().tanggal;
   const [tanggal, setTanggal] = useState(awal && awal <= hariIni ? awal : hariIni);
   const { data, galat, memuat, muat } = useMuat<{ jurnal: ItemJurnal[] }>(`/api/m/jurnal?tanggal=${tanggal}`);
+  const kunci = useRef(false);
+  const [sibuk, setSibuk] = useState(false);
+  const [hasil, setHasil] = useState("");
   const kepala = pengguna.peran === "KEPALA";
 
-  if (!data && !galat) return <Memuat />;
   const belum = data?.jurnal.filter((j) => !j.diperiksa) ?? [];
   return (
-    <Layar segarkan={muat} memuat={memuat}>
-      <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={setTanggal} />
-      {galat && <Pesan jenis="galat" teks={galat} />}
+    <Layar segarkan={sibuk ? undefined : muat} memuat={memuat}>
+      <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={t => { if (!kunci.current) { setTanggal(t); setHasil(""); } }} />
+      {memuat && <Memuat />}
+      {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
       {data && <T redup>{data.jurnal.length} jurnal, {belum.length} belum diperiksa</T>}
+      {hasil && <T>{hasil}</T>}
       {kepala && belum.length > 1 && (
-        <Tombol judul={`Tandai semua (${belum.length}) sudah diperiksa`} onPress={async () => {
-          await minta("/api/m/jurnal", { body: { ids: belum.map((j) => j.id) } });
-          void muat();
+        <Tombol judul={`Tandai semua (${belum.length}) sudah diperiksa`} memuat={sibuk} onPress={async () => {
+          if (kunci.current) return;
+          kunci.current = true;
+          setSibuk(true);
+          let berhasil = 0;
+          try {
+            if (!await konfirmasi("Tandai semua", `Tandai ${belum.length} jurnal tanggal ${formatTanggal(tanggal)} sudah diperiksa?`)) return;
+            for (let i = 0; i < belum.length; i += 200) {
+              const ids = belum.slice(i, i + 200).map(j => j.id);
+              await minta("/api/m/jurnal", { body: { ids } });
+              berhasil += ids.length;
+            }
+            setHasil(`${berhasil} jurnal sudah diperiksa.`);
+            muat();
+          } catch (e) {
+            setHasil(`${berhasil} dikonfirmasi. ${e instanceof Error ? e.message : "Gagal menyimpan."} Coba lagi.`);
+            muat();
+          } finally { kunci.current = false; setSibuk(false); }
         }} />
       )}
       {data?.jurnal.length === 0 && <Kartu><T redup>Belum ada jurnal pada tanggal ini.</T></Kartu>}
-      {data?.jurnal.map((j) => <KartuJurnal key={j.id} j={j} kepala={kepala} setelahUbah={muat} />)}
+      {data?.jurnal.map((j) => <KartuJurnal key={j.id} j={j} kepala={kepala && !sibuk} setelahUbah={muat} />)}
     </Layar>
   );
 }

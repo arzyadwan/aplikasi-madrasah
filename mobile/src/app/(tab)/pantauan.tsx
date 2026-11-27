@@ -24,12 +24,12 @@ export default function Pantauan() {
   const { data: p, galat, memuat, muat } = useMuat<ResponsPantauan>(`/api/m/pantauan?tanggal=${tanggal}`);
   useFocusEffect(useCallback(() => { void muat(); }, [muat]));
 
-  if (!p && !galat) return <Memuat />;
   return (
     <Layar segarkan={muat} memuat={memuat}>
       <Judul>Pantauan harian</Judul>
       <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={setTanggal} />
-      {galat && <Pesan jenis="galat" teks={galat} />}
+      {memuat && <Memuat />}
+      {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
       {p && (
         <>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>

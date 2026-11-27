@@ -1,10 +1,10 @@
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, Linking, Platform, Pressable, Text, View } from "react-native";
-import { idBaru, kirimAtauAntre, useAntrean } from "@/lib/antrean";
+import { idBaru, kirimAtauAntre, useAntrean, useBuktiAbsen, type ItemAntrean } from "@/lib/antrean";
 import { useHariIni } from "@/lib/hari-ini";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_GURU, type StatusGuru } from "@/lib/tipe";
@@ -26,12 +26,15 @@ async function siapkanFoto(uri: string): Promise<string> {
 export default function AbsenSaya() {
   const { zona } = useSaya();
   const { data, memuat, muat } = useHariIni();
+  const { antreanId } = useLocalSearchParams<{ antreanId?: string }>();
   const antrean = useAntrean();
   useFocusEffect(useCallback(() => { void muat(); }, [muat]));
   const tanggal = tanggalDiZona(zona);
-  const tertunda = antrean.some((x) => x.path === "/api/absen-guru" && x.body.tanggal === tanggal);
+  const bukti = useBuktiAbsen();
+  useEffect(() => { if (bukti === tanggal) muat(); }, [bukti, tanggal, muat]);
+  const lokal = antrean.find(x => x.id === antreanId && x.path === "/api/absen-guru" && x.body.tanggal === tanggal) ?? [...antrean].reverse().find((x) => x.path === "/api/absen-guru" && x.body.tanggal === tanggal);
 
-  if (!data && memuat) return <Memuat />;
+  if (!lokal && bukti !== tanggal && !data && memuat) return <Memuat />;
   const a = data?.data.tanggal === tanggal ? data.absenSaya : null;
 
   return (
@@ -40,7 +43,7 @@ export default function AbsenSaya() {
         <Judul>Absen saya</Judul>
         <T redup>{formatTanggal(tanggal)}</T>
       </View>
-      {a ? (
+      {a && !(lokal?.galat && lokal.id === antreanId) ? (
         <Kartu>
           <T tebal ukuran={18} style={{ color: W.utama }}>{LABEL_STATUS_GURU[a.status]}</T>
           <T redup>Tercatat pukul {jamDiZona(zona, a.waktuMasuk)}</T>
@@ -50,24 +53,27 @@ export default function AbsenSaya() {
             <FotoAman absenId={a.id} label="Foto absen" style={{ width: 140, height: 180, borderRadius: 10, marginTop: 6 }} />
           )}
         </Kartu>
-      ) : tertunda ? (
-        <Pesan jenis="antre" teks="Absen hari ini sudah tersimpan di HP dan menunggu dikirim." />
+      ) : bukti === tanggal ? <Pesan jenis="ok" teks="Terkirim. Menunggu pembaruan status server." /> : lokal && !lokal.galat ? (
+        <Pesan jenis="antre" teks="Tersimpan di HP, menunggu dikirim." />
       ) : (
-        <FormAbsen tanggal={tanggal} onSelesai={muat} />
+        lokal?.galat || data?.data.tanggal === tanggal ?
+          <><T>{lokal?.galat ? `Perlu diperbaiki. ${lokal.galat}` : "Belum absen"}</T>
+          <FormAbsen key={lokal?.id ?? tanggal} lokal={lokal} tanggal={tanggal} onSelesai={muat} /></>
+          : <><Pesan jenis="info" teks="Status belum dapat diperiksa." /><Tombol judul="Coba lagi" onPress={muat} /></>
       )}
     </Layar>
   );
 }
 
-function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => void }) {
-  const { madrasah } = useSaya();
-  const [status, setStatus] = useState<StatusGuru>("HADIR");
-  const [lokasi, setLokasi] = useState<Lokasi | null>(null);
+function FormAbsen({ tanggal, onSelesai, lokal }: { lokal?: ItemAntrean; tanggal: string; onSelesai: () => void }) {
+  const { madrasah, zona } = useSaya();
+  const [status, setStatus] = useState<StatusGuru>((lokal?.body.status as StatusGuru) ?? "HADIR");
+  const [lokasi, setLokasi] = useState<Lokasi | null>(() => typeof lokal?.body.lat === "number" && typeof lokal.body.lng === "number" ? { lat: lokal.body.lat, lng: lokal.body.lng, akurasi: Number(lokal.body.akurasi) } : null);
   const [galatLokasi, setGalatLokasi] = useState<string | null>(null);
   const [petunjukIzin, setPetunjukIzin] = useState<string | null>(null);
   const [mencari, setMencari] = useState(false);
-  const [foto, setFoto] = useState<string | null>(null);
-  const [keterangan, setKeterangan] = useState("");
+  const [foto, setFoto] = useState<string | null>(lokal?.body.foto as string ?? null);
+  const [keterangan, setKeterangan] = useState(String(lokal?.body.keterangan ?? ""));
   const [proses, setProses] = useState(false);
   const [pesan, setPesan] = useState<{ jenis: JenisPesan; teks: string } | null>(null);
 
@@ -81,7 +87,7 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
 
   const [percobaan, setPercobaan] = useState(0);
   useEffect(() => {
-    if (status !== "HADIR") return;
+    if (status !== "HADIR" || (!percobaan && lokal?.body.lat != null)) return;
     let aktif = true;
     let batas: ReturnType<typeof setTimeout> | undefined;
     setLokasi(null);
@@ -114,7 +120,7 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
     }
     void cari();
     return () => { aktif = false; clearTimeout(batas); };
-  }, [status, percobaan]);
+  }, [status, percobaan, lokal]);
 
   async function ambilFoto() {
     try {
@@ -131,23 +137,30 @@ function FormAbsen({ tanggal, onSelesai }: { tanggal: string; onSelesai: () => v
     }
   }
 
+  const kunci = useRef(false);
   async function kirim() {
     setPesan(null);
     if (status === "HADIR" && !lokasi) { setPesan({ jenis: "galat", teks: "Ambil lokasi GPS dulu." }); return; }
     if (status === "HADIR" && !foto) { setPesan({ jenis: "galat", teks: "Ambil foto selfie dulu." }); return; }
     if (status !== "HADIR" && !keterangan.trim()) { setPesan({ jenis: "galat", teks: "Isi keterangan." }); return; }
+    if (kunci.current) return;
+    if (tanggal !== tanggalDiZona(zona)) { setPesan({ jenis: "galat", teks: "Tanggal sudah berganti." }); return; }
+    kunci.current = true;
     setProses(true);
-    const hadir = status === "HADIR";
-    const hasil = await kirimAtauAntre("/api/absen-guru", {
-      idKlien: idBaru(), tanggal, status,
-      lat: hadir ? lokasi?.lat : null, lng: hadir ? lokasi?.lng : null, akurasi: hadir ? lokasi?.akurasi : null,
-      foto: hadir ? foto : null, keterangan: keterangan.trim() || null,
-      diisiDiPerangkat: new Date().toISOString(),
-    }, `Absen saya (${tanggal})`);
-    setProses(false);
-    if (hasil.status === "terkirim") { setPesan({ jenis: "ok", teks: "Absen tercatat." }); onSelesai(); }
-    else if (hasil.status === "diantre") setPesan({ jenis: "antre", teks: "Tidak ada internet. Absen disimpan di HP dan dikirim otomatis saat internet tersambung." });
-    else setPesan({ jenis: "galat", teks: hasil.pesan });
+    try {
+      const hadir = status === "HADIR";
+      const hasil = await kirimAtauAntre("/api/absen-guru", {
+        idKlien: idBaru(), tanggal, status,
+        lat: hadir ? lokasi?.lat : null, lng: hadir ? lokasi?.lng : null, akurasi: hadir ? lokasi?.akurasi : null,
+        foto: hadir ? foto : null, keterangan: keterangan.trim() || null,
+        diisiDiPerangkat: new Date().toISOString(),
+      }, `Absen saya (${tanggal})`, lokal?.id);
+
+      if (hasil.status === "terkirim") { setPesan({ jenis: "ok", teks: "Absen tercatat." }); onSelesai(); }
+      else if (hasil.status === "diantre") setPesan({ jenis: "antre", teks: "Tersimpan di HP, menunggu dikirim." });
+      else setPesan({ jenis: "galat", teks: hasil.pesan });
+    } catch { setPesan({ jenis: "galat", teks: "Gagal menyimpan di HP. Coba lagi." }); }
+    finally { kunci.current = false; setProses(false); }
   }
 
   const jarak = lokasi && madrasah.lat != null && madrasah.lng != null ? jarakMeter(lokasi.lat, lokasi.lng, madrasah.lat, madrasah.lng) : null;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { minta } from "./api";
 
 type Hasil<T> = { ok: true; data: T } | { ok: false; pesan: string };
@@ -13,27 +13,16 @@ async function ambil<T>(path: string): Promise<Hasil<T>> {
 
 /** Ambil data dari server untuk satu layar (online), dengan status memuat dan galat */
 export function useMuat<T>(path: string | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [galat, setGalat] = useState<string | null>(null);
-  const [memuat, setMemuat] = useState(true);
   const [versi, setVersi] = useState(0);
-
+  const permintaan = useMemo(() => ({ path, versi }), [path, versi]);
+  const [hasil, setHasil] = useState<{ permintaan: typeof permintaan; nilai: Hasil<T> }>();
   useEffect(() => {
     if (!path) return;
-    let batal = false;
-    ambil<T>(path).then((h) => {
-      if (batal) return;
-      if (h.ok) { setData(h.data); setGalat(null); } else setGalat(h.pesan);
-      setMemuat(false);
-    });
-    return () => { batal = true; };
-  }, [path, versi]);
-
-  /** Muat ulang (tarik layar ke bawah) */
-  const muat = useCallback(() => {
-    setMemuat(true);
-    setVersi((v) => v + 1);
-  }, []);
-
-  return { data, galat, memuat, muat };
+    let aktif = true;
+    ambil<T>(path).then(nilai => { if (aktif) setHasil({ permintaan, nilai }); });
+    return () => { aktif = false; };
+  }, [path, permintaan]);
+  const muat = useCallback(() => setVersi(v => v + 1), []);
+  const nilai = hasil?.permintaan === permintaan ? hasil.nilai : null;
+  return { data: nilai?.ok ? nilai.data : null, galat: nilai && !nilai.ok ? nilai.pesan : null, memuat: !!path && !nilai, muat };
 }

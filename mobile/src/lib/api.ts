@@ -14,7 +14,7 @@ export function headerAuth(): Record<string, string> { return token ? { Authoriz
 
 /** Tidak ada internet / server tidak terjangkau */
 export class GalatJaringan extends Error {
-  constructor() { super("Tidak bisa terhubung ke server. Periksa internet Anda."); }
+  constructor(timeout = false) { super(timeout ? "Batas waktu koneksi terlampaui." : "Tidak bisa terhubung ke server. Periksa internet Anda."); }
 }
 
 /** Server menolak permintaan (pesan dari server) */
@@ -34,6 +34,7 @@ export async function minta<T>(path: string, opsi: { method?: string; body?: unk
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), opsi.timeoutMs ?? 20000);
   let res: Response;
+  let data: { pesan?: string } | null;
   try {
     res = await fetch(`${basis}${path}`, {
       method: opsi.method ?? (opsi.body ? "POST" : "GET"),
@@ -45,18 +46,19 @@ export async function minta<T>(path: string, opsi: { method?: string; body?: unk
       body: opsi.body ? JSON.stringify(opsi.body) : undefined,
       signal: ctrl.signal,
     });
+    data = await res.json().catch(() => null);
+    if (ctrl.signal.aborted) throw new GalatJaringan(true);
   } catch {
-    throw new GalatJaringan();
+    throw new GalatJaringan(ctrl.signal.aborted);
   } finally {
     clearTimeout(t);
   }
-  const data = (await res.json().catch(() => null)) as { pesan?: string } | null;
   if (!res.ok) {
     if (res.status === 401 && !opsi.tanpaToken) saatTidakSah?.();
-    if (res.status >= 500 || res.status === 408 || res.status === 429 || res.status === 502 || res.status === 504) {
-      if (!data?.pesan) throw new GalatJaringan();
-    }
-    throw new GalatServer(res.status, data?.pesan ?? `Permintaan gagal (${res.status}).`);
+    const jenis = res.status >= 500 ? "Server bermasalah" : "Permintaan ditolak";
+    throw new GalatServer(res.status, `${jenis} (${res.status}).${data?.pesan ? " " + data.pesan : ""}`);
+
   }
+  if (!data) throw new GalatServer(502, "Jawaban server tidak lengkap. Coba lagi.");
   return data as T;
 }

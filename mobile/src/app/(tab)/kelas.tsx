@@ -18,7 +18,6 @@ export default function KelasSaya() {
   const [kelasId, setKelasId] = useState(u.kelasWali[0]?.id ?? "");
   const { data, galat, memuat, muat } = useMuat<ResponsWali>(`/api/m/wali?kelas=${kelasId}&tanggal=${tanggal}`);
 
-  if (!data && !galat) return <Memuat />;
   return (
     <Layar segarkan={muat} memuat={memuat}>
       <Judul>Kelas {data?.kelas.nama ?? ""}</Judul>
@@ -28,7 +27,8 @@ export default function KelasSaya() {
         </View>
       )}
       <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={setTanggal} />
-      {galat && <Pesan jenis="galat" teks={galat} />}
+      {memuat && <Memuat />}
+      {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
       {data && (
         <>
           <Judul kecil>Jadwal dan jurnal</Judul>
