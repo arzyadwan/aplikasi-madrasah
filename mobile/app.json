@@ -15,8 +15,14 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -28,7 +34,11 @@
       "expo-secure-store",
       [
         "expo-splash-screen",
-        { "image": "./assets/splash-icon.png", "imageWidth": 160, "backgroundColor": "#18734F" }
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#18734F"
+        }
       ],
       [
         "expo-image-picker",
@@ -40,19 +50,27 @@
       ],
       [
         "expo-location",
-        { "locationWhenInUsePermission": "Lokasi dipakai untuk mencatat absen guru di madrasah." }
+        {
+          "locationWhenInUsePermission": "Lokasi dipakai untuk mencatat absen guru di madrasah."
+        }
       ],
       [
         "expo-build-properties",
         {
           "android": {
             "usesCleartextTraffic": true,
-            "buildArchs": ["arm64-v8a", "armeabi-v7a"]
+            "buildArchs": [
+              "arm64-v8a",
+              "armeabi-v7a"
+            ]
           }
         }
-      ]
+      ],
+      "./plugins/tanda-tangan-rilis"
     ],
-    "experiments": { "typedRoutes": true },
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "alamatServerBawaan": ""
     }

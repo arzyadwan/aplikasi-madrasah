@@ -1,8 +1,12 @@
 # Aplikasi Madrasah
 
-Aplikasi web untuk **kehadiran dan jurnal mengajar** madrasah, disusun dari hasil kuesioner kebutuhan
-MTs Al-Ikhlas Amberi (Lambuya, Konawe). Bisa dibuka dari HP Android maupun iPhone lewat browser,
-dipasang di layar utama HP, dan tetap bisa dipakai mengisi absen saat internet putus.
+Aplikasi **kehadiran dan jurnal mengajar** madrasah, disusun dari hasil kuesioner kebutuhan
+MTs Al-Ikhlas Amberi (Lambuya, Konawe). Terdiri dari dua bagian yang memakai server dan database yang sama:
+
+- **Aplikasi Android** (folder [`mobile/`](mobile/README.md)) untuk guru, wali kelas, dan kepala madrasah:
+  absen GPS + selfie, absen siswa dan jurnal, bisa dipakai offline. Dibagikan sebagai file APK.
+- **Server + versi web** (folder ini): API untuk aplikasi Android, tempat operator/TU mengelola data,
+  laporan Excel, dan versi web untuk pengguna iPhone atau komputer.
 
 ## Fitur tahap 1
 
@@ -102,10 +106,12 @@ pemeriksaan jurnal oleh kepala madrasah, dan unduhan laporan Excel.
 ## Struktur singkat
 
 ```
+mobile/              aplikasi Android (React Native / Expo), lihat mobile/README.md
 prisma/              skema database, migrasi, data awal
 src/app/login        halaman masuk
 src/app/(aplikasi)/  halaman setelah login: guru, wali, kepala, laporan, admin, akun
 src/app/api/         API absen guru, pertemuan (absen siswa + jurnal), foto, laporan Excel
+src/app/api/m/       API khusus aplikasi Android (login token, data hari ini, pantauan, dll.)
 src/lib/             akses data, aturan pengisian, waktu WITA, antrean offline
 public/sw.js         service worker untuk mode offline
 e2e/, tests/         pengujian
