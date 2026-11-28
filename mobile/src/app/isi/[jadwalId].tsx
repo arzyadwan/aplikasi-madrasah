@@ -208,12 +208,12 @@ function Form({ item, materiLalu, tanggal, offline, kunci, lokal, draf }: { kunc
   }
 
   return <View style={{ flex: 1, backgroundColor: W.latar }}>
-    <Stack.Screen options={{ title: `${item.mapel.nama} · ${item.kelas.nama}`, headerBackTitle: "Kembali" }} />
+    <Stack.Screen options={{ title: item.mapel.nama, headerBackTitle: "Kembali" }} />
     <Daftar key={kolom} data={daftarSiswa} numColumns={kolom} renderItem={kartuSiswa}
       columnWrapperStyle={{ marginHorizontal: -4 }} ListEmptyComponent={<T redup>{tidakHadir ? "Semua siswa hadir." : "Belum ada siswa di kelas ini."}</T>}>
       <Hero style={gaya.hero}>
         <View style={[gaya.baris, { flexWrap: "wrap" }]}>
-          <T style={{ color: "#CFE8DD" }}>Jam {item.jamMulai}{item.jamSelesai > item.jamMulai ? `–${item.jamSelesai}` : ""} · {item.waktu}</T>
+          <T style={{ color: "#CFE8DD" }}>Kelas {item.kelas.nama} · Jam {item.jamMulai}{item.jamSelesai > item.jamMulai ? `–${item.jamSelesai}` : ""} · {item.waktu}</T>
           {editable && adaIsiDraf && (tersimpan || nilai !== awal.current) && <View style={gaya.draf}><T tebal ukuran={12} style={{ color: W.utama }}>{tersimpan === nilai ? "Draf tersimpan" : "Draf berubah"}</T></View>}
         </View>
         <View style={[gaya.baris, { flexWrap: "wrap" }]}>

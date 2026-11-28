@@ -71,7 +71,7 @@ export default function Akun() {
         </Baris>
       </Kartu>
       <Kartu style={{ gap: 6 }}>
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded: buka }} onPress={() => setBuka(!buka)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Ganti kata sandi" accessibilityState={{ expanded: buka }} onPress={() => setBuka(!buka)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={{ width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#E1F2EA" }}><Ionicons name="key-outline" size={18} color={W.utama} /></View><T tebal style={{ flex: 1 }}>Ganti kata sandi</T>
           <Ionicons name={buka ? "chevron-up" : "chevron-down"} color={W.redup} size={18} />
         </Pressable>
@@ -82,7 +82,7 @@ export default function Akun() {
           {pesan && <Pesan jenis={pesan.jenis} teks={pesan.teks} />}
           <Tombol judul="Simpan" onPress={ganti} memuat={proses} />
         </View>}
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded: lihatAntrean }} onPress={() => setLihatAntrean(!lihatAntrean)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: 1, borderColor: W.garis }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Antrean pengiriman, ${antrean.length ? antrean.length + " belum terkirim" : "semua terkirim"}`} accessibilityState={{ expanded: lihatAntrean }} onPress={() => setLihatAntrean(!lihatAntrean)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: 1, borderColor: W.garis }}>
           <View style={{ width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF4D6" }}><Ionicons name="cloud-upload-outline" size={18} color="#8A5300" /></View>
           <View style={{ flex: 1 }}><T tebal>Antrean pengiriman</T><T redup ukuran={12}>{antrean.length ? `${antrean.length} belum terkirim` : "Semua terkirim"}</T></View>
           <Ionicons name={lihatAntrean ? "chevron-up" : "chevron-down"} size={18} color={W.redup} />

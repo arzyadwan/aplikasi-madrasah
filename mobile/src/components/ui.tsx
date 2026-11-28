@@ -72,7 +72,7 @@ export function Tombol({ judul, onPress, jenis = "utama", memuat, nonaktif, terp
   const warnaTeks = jenis === "utama" ? W.putih : jenis === "bahaya" ? W.merah : W.utama;
   return (
     <Pressable hitSlop={2} testID={testID} accessibilityRole="button" accessibilityLabel={judul} accessibilityState={{ selected: terpilih, disabled: !!mati }} disabled={mati} onPress={onPress}
-      style={({ pressed }) => [s.tombol, gaya, jenis !== "utama" && { minHeight: 44 }, mati && { opacity: 0.5 }, pressed && { opacity: 0.8 }]}>
+      style={({ pressed }) => [s.tombol, gaya, mati && { opacity: 0.5 }, pressed && { opacity: 0.8 }]}>
       {memuat ? <ActivityIndicator color={warnaTeks} /> : ikon}
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} maxFontSizeMultiplier={1.2} style={{ flexShrink: 1, color: warnaTeks, ...huruf(600), fontSize: 14 }}>{judul}</Text>
     </Pressable>

@@ -31,7 +31,7 @@ function Kepala({ tanggal, children, tumpang }: { tanggal: string; children?: Re
 function Menu({ nama, info, ikon, warna, latar, buka }: {
   nama: string; info: string; ikon: keyof typeof Ionicons.glyphMap; warna: string; latar: string; buka: () => void;
 }) {
-  return <Pressable accessibilityRole="button" onPress={buka} style={s.menu}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${nama}, ${info}`} onPress={buka} style={s.menu}>
     <View style={[s.ikon, { backgroundColor: latar }]}><Ionicons name={ikon} size={20} color={warna} /></View>
     <View style={{ flex: 1 }}><T ringkas tebal ukuran={14}>{nama}</T><T numberOfLines={1} ellipsizeMode="tail" redup ukuran={13}>{info}</T></View>
   </Pressable>;
