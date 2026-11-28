@@ -1,10 +1,16 @@
+import { useEffect } from "react";
+import { useFonts } from "expo-font";
+import { PlusJakartaSans_400Regular as Jakarta400 } from "@expo-google-fonts/plus-jakarta-sans/400Regular";
+import { PlusJakartaSans_500Medium as Jakarta500 } from "@expo-google-fonts/plus-jakarta-sans/500Medium";
+import { PlusJakartaSans_600SemiBold as Jakarta600 } from "@expo-google-fonts/plus-jakarta-sans/600SemiBold";
+import { PlusJakartaSans_700Bold as Jakarta700 } from "@expo-google-fonts/plus-jakarta-sans/700Bold";
 import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { PenyediaSesi, useSesi } from "@/lib/sesi";
 import { StatusSinkron } from "@/components/status-sinkron";
-import { W } from "@/components/ui";
+import { huruf, W } from "@/components/ui";
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function Akar() {
   return (
@@ -16,13 +22,15 @@ export default function Akar() {
 
 function Navigasi() {
   const { memuat, token, saya } = useSesi();
-  if (memuat) return null;
-  SplashScreen.hide();
+  const [fontSiap, galatFont] = useFonts({ Jakarta400, Jakarta500, Jakarta600, Jakarta700 });
+  const siap = !memuat && (fontSiap || !!galatFont);
+  useEffect(() => { if (siap) SplashScreen.hide(); }, [siap]);
+  if (!siap) return null;
   const login = !!token && !!saya;
   return (
-    <><StatusBar style={login ? "light" : "dark"} />
+    <><StatusBar style="light" />
     <Stack screenOptions={{
-      headerStyle: { backgroundColor: W.utamaTua }, headerTintColor: W.putih, headerTitleStyle: { fontWeight: "700" },
+      headerStyle: { backgroundColor: W.utamaTua }, headerTintColor: W.putih, headerTitleStyle: { ...huruf(700), fontSize: 20 },
       headerRight: () => <StatusSinkron />,
     }}>
       <Stack.Protected guard={login}>

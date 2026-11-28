@@ -71,7 +71,8 @@
           }
         }
       ],
-      "./plugins/tanda-tangan-rilis"
+      "./plugins/tanda-tangan-rilis",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
