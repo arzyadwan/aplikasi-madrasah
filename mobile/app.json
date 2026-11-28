@@ -2,14 +2,14 @@
   "expo": {
     "name": "Madrasah",
     "slug": "aplikasi-madrasah",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "madrasah",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "id.alikhlasamberi.madrasah",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#18734F",
         "foregroundImage": "./assets/android-icon-foreground.png",
