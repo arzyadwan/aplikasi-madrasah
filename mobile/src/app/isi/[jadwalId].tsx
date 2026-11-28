@@ -60,11 +60,11 @@ export default function IsiPertemuan() {
     return () => { aktif = false; };
   }, [jadwalId, antreanId, kunci, prefix, hari]);
 
-  if (muatan?.kunci !== kunci) return <Layar><HeroSub judul="Absen & jurnal" sub="Memuat daftar siswa…" /><Kerangka baris={6} /></Layar>;
+  if (muatan?.kunci !== kunci) return <Layar><HeroSub judul="Absen & catatan" sub="Memuat daftar siswa…" /><Kerangka baris={6} /></Layar>;
   if (!muatan.item) {
     return (
       <Layar>
-        <HeroSub judul="Absen & jurnal" />
+        <HeroSub judul="Absen & catatan" />
         <Pesan jenis="galat" teks={muatan.offline ? "Jadwal ini belum tersimpan di HP. Sambungkan internet lalu coba lagi." : muatan.galat ?? "Jadwal tidak ditemukan untuk hari ini."} />
         <Tombol jenis="garis" judul="Kembali" onPress={() => router.back()} />
       </Layar>
@@ -237,11 +237,11 @@ function Form({ item, materiLalu, tanggal, offline, kunci, lokal, draf }: { kunc
       {p && <Pesan jenis="ok" teks={akhiriKalimat(`Sudah diisi oleh ${p.namaGuru}${p.pengganti ? " (pengganti)" : ""}`) + (bolehIsi ? " Anda masih bisa mengubahnya hari ini." : "")} />}
 
       {!bolehIsi && <Pesan jenis="info" teks={
-        p?.diperiksa ? "Jurnal sudah diperiksa kepala madrasah, jadi tidak bisa diubah lagi."
+        p?.diperiksa ? "Catatan mengajar sudah diperiksa kepala madrasah, jadi tidak bisa diubah lagi."
         : tanggal < hariIni ? "Jadwal ini sudah lewat harinya, jadi tidak bisa diisi atau diubah lagi."
-        : tanggal > hariIni ? "Jadwal ini belum tiba. Jurnal hanya bisa diisi pada hari yang dijadwalkan."
-        : pengguna.peran === "ADMIN" ? "Admin hanya bisa melihat jurnal ini."
-        : "Jurnal ini sudah diisi oleh guru lain. Hanya guru yang mengisinya yang bisa mengubahnya."
+        : tanggal > hariIni ? "Jadwal ini belum tiba. Catatan mengajar hanya bisa diisi pada hari yang dijadwalkan."
+        : pengguna.peran === "ADMIN" ? "Admin hanya bisa melihat catatan ini."
+        : "Catatan ini sudah diisi oleh guru lain. Hanya guru yang mengisinya yang bisa mengubahnya."
       } />}
       <Kartu>
         <Masukan label="Materi hari ini (wajib)" placeholder="Materi yang diajarkan" editable={editable} value={materi} onChangeText={setMateri} multiline />

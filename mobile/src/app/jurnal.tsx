@@ -48,14 +48,14 @@ export default function Jurnal() {
     setSibuk(true);
     let berhasil = 0;
     try {
-      if (!await konfirmasi("Tandai semua", `Tandai ${belum.length} jurnal tanggal ${formatTanggal(tanggal)} sudah diperiksa?`)) return;
+      if (!await konfirmasi("Tandai semua", `Tandai ${belum.length} catatan tanggal ${formatTanggal(tanggal)} sudah diperiksa?`)) return;
       for (let i = 0; i < belum.length; i += 200) {
         const ids = belum.slice(i, i + 200).map(j => j.id);
         await minta("/api/m/jurnal", { body: { ids } });
         berhasil += ids.length;
       }
       getar("sukses");
-      setHasil(`${berhasil} jurnal sudah diperiksa.`);
+      setHasil(`${berhasil} catatan sudah diperiksa.`);
       muat();
     } catch (e) {
       setHasil(`${berhasil} dikonfirmasi. ${e instanceof Error ? e.message : "Gagal menyimpan."} Coba lagi.`);
@@ -70,12 +70,12 @@ export default function Jurnal() {
         renderItem={({ item: j, index }) => <BarisJurnal j={j} awal={index === 0} akhir={index === daftar.length - 1}
           bisaGeser={kepala && !sibuk && !j.diperiksa} onBuka={() => setDibuka(j.id)}
           onGeser={() => periksa(j.id).catch(e => setHasil(e instanceof Error ? e.message : "Gagal menyimpan."))} />}>
-        <HeroSub judul="Periksa jurnal" sub={formatTanggal(tanggal)}
+        <HeroSub judul="Periksa catatan mengajar" sub={formatTanggal(tanggal)}
           kanan={<Pressable accessibilityRole="button" accessibilityLabel={"Ganti tanggal, " + formatTanggal(tanggal)}
             accessibilityState={{ expanded: pilihTanggal }} onPress={() => setPilihTanggal(!pilihTanggal)} style={s.ganti}>
             <Ionicons name="calendar-outline" size={16} color={W.putih} /><T tebal ukuran={12} style={{ color: W.putih }}>Ganti</T>
           </Pressable>}>
-          {data && <View accessible accessibilityLabel={`${diperiksa.length} dari ${semua.length} jurnal sudah diperiksa`} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {data && <View accessible accessibilityLabel={`${diperiksa.length} dari ${semua.length} catatan sudah diperiksa`} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={s.jalur}><View style={{ height: 8, backgroundColor: W.emas, width: `${100 * diperiksa.length / (semua.length || 1)}%` }} /></View>
             <T tebal ukuran={12} style={{ color: W.putih }}>{diperiksa.length} dari {semua.length} diperiksa</T>
           </View>}
@@ -89,11 +89,11 @@ export default function Jurnal() {
           {!!hasil && <Pesan jenis="info" teks={hasil} />}
           {memuat && !data && <Kerangka baris={4} />}
           {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
-          {data && !daftar.length && <View style={s.kosong}><T redup>{semua.length ? "Tidak ada jurnal dalam kategori ini." : "Belum ada jurnal pada tanggal ini."}</T></View>}
+          {data && !daftar.length && <View style={s.kosong}><T redup>{semua.length ? "Tidak ada catatan dalam kategori ini." : "Belum ada catatan mengajar pada tanggal ini."}</T></View>}
         </View>
       </Daftar>
       {kepala && belum.length > 0 && <View style={[s.bilah, { marginBottom: bottom + 8 }]}>
-        <T tebal style={{ color: W.putih, flex: 1 }}>{belum.length} jurnal belum diperiksa</T>
+        <T tebal style={{ color: W.putih, flex: 1 }}>{belum.length} catatan belum diperiksa</T>
         <Pressable accessibilityRole="button" disabled={sibuk} accessibilityState={{ disabled: sibuk, busy: sibuk }} onPress={tandaiSemua} style={s.tombolEmas}>
           <T tebal style={{ color: "#3D2600" }}>{sibuk ? "Memproses…" : "Tandai semua"}</T>
         </Pressable>
@@ -105,7 +105,7 @@ export default function Jurnal() {
   );
 }
 
-/** Satu baris jurnal. Kepala bisa menggeser ke kanan untuk menandai diperiksa. */
+/** Satu baris catatan mengajar. Kepala bisa menggeser ke kanan untuk menandai diperiksa. */
 function BarisJurnal({ j, awal, akhir, bisaGeser, onBuka, onGeser }: {
   j: ItemJurnal; awal: boolean; akhir: boolean; bisaGeser: boolean; onBuka: () => void; onGeser: () => void;
 }) {
@@ -129,7 +129,7 @@ function BarisJurnal({ j, awal, akhir, bisaGeser, onBuka, onGeser }: {
     <Animated.View {...geser.panHandlers} style={{ transform: [{ translateX: x }] }}>
       <Pressable accessibilityRole="button"
         accessibilityLabel={`${j.guru}, ${j.mapel}, kelas ${j.kelas}, jam ${j.jamMulai} sampai ${j.jamSelesai}. Materi ${j.materi}. ${j.diperiksa ? "Sudah diperiksa" : "Belum diperiksa"}`}
-        accessibilityHint="Buka rincian jurnal"
+        accessibilityHint="Buka rincian catatan"
         accessibilityActions={bisaGeser ? [{ name: "periksa", label: "Tandai diperiksa" }] : undefined}
         onAccessibilityAction={e => { if (e.nativeEvent.actionName === "periksa") onGeser(); }}
         onPress={onBuka} style={({ pressed }) => [s.baris, ...sudut, pressed && { backgroundColor: "#F7FAF8" }]}>
@@ -148,7 +148,7 @@ function BarisJurnal({ j, awal, akhir, bisaGeser, onBuka, onGeser }: {
   </View>;
 }
 
-/** Sheet bawah berisi rincian jurnal dan aksi pemeriksaan. */
+/** Sheet bawah berisi rincian catatan mengajar dan aksi pemeriksaan. */
 function SheetJurnal({ j, kepala, onTutup, onPeriksa }: {
   j: ItemJurnal | null; kepala: boolean; onTutup: () => void; onPeriksa: (catatan: string | null, batal: boolean) => Promise<void>;
 }) {

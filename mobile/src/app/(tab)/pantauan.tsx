@@ -55,7 +55,7 @@ function KehadiranKelas({ kelas }: { kelas: ResponsPantauan["perKelas"] }) {
           <T ringkas tebal={nilai != null} ukuran={12} style={{ width: 40, textAlign: "right", color: nilai == null ? "#8A9A93" : nilai < 90 ? W.kuning : W.teks }}>{nilai == null ? "belum" : nilai}</T>
         </Pressable>
         {buka && <View style={s.rincianKelas}>
-          <T tebal ukuran={13}>Jurnal {k.terisi}/{k.jadwal} · {k.jumlahSiswa} siswa</T>
+          <T tebal ukuran={13}>Catatan {k.terisi}/{k.jadwal} · {k.jumlahSiswa} siswa</T>
           <T ukuran={12}>Hadir {H} · Sakit {S} · Izin {I} · Alpa {A}</T>
           {k.tidakHadir.map((siswa, i) => <T key={i} redup ukuran={12}>{siswa.nama} · {siswa.status.join(", ")}</T>)}
         </View>}
@@ -119,7 +119,7 @@ export default function Pantauan() {
     {p && <View style={[s.angka, { marginTop: -30 }]}>
       <Angka ikon="people-outline" label="Guru sudah absen" nilai={p.guru.sudahAbsen} total={p.guru.total}
         sub={`${p.guru.hadir} hadir · ${p.guru.sudahAbsen - p.guru.hadir} izin/sakit`} onPress={keGuru} />
-      <Angka ikon="document-text-outline" label="Jurnal terisi" nilai={p.jadwal.terisi} total={p.jadwal.total}
+      <Angka ikon="document-text-outline" label="Catatan terisi" nilai={p.jadwal.terisi} total={p.jadwal.total}
         sub={`${p.jadwal.belumDiperiksa} belum diperiksa`} onPress={keJurnal} />
     </View>}
     {memuat && !p && <Kerangka baris={3} />}
@@ -131,10 +131,10 @@ export default function Pantauan() {
           kanan={<Panah />} onPress={keGuru} label={`${p.belumAbsen.length} guru belum absen, ${berjadwal} punya jadwal. Buka kehadiran guru`}
           akhir={!p.belumJurnal.length && !p.guru.luarRadius} />}
         {p.belumJurnal.length > 0 && <BarisDaftar kiri={<Titik warna="#D99A1E" />}
-          judul={terlambat ? `${terlambat} jurnal terlambat` : `${p.belumJurnal.length} jurnal belum diisi`}
+          judul={terlambat ? `${terlambat} catatan terlambat` : `${p.belumJurnal.length} catatan belum diisi`}
           sub={[...new Set(p.belumJurnal.filter(j => !terlambat || j.lewat).map(j => j.kelas.nama))].slice(0, 4).join(", ")}
           kanan={<Ionicons name={detailJurnal ? "chevron-up" : "chevron-down"} size={16} color="#8A9A93" />}
-          onPress={() => { getar(); setDetailJurnal(!detailJurnal); }} label="Jurnal belum diisi, ketuk untuk rincian"
+          onPress={() => { getar(); setDetailJurnal(!detailJurnal); }} label="Catatan mengajar belum diisi, ketuk untuk rincian"
           akhir={!p.guru.luarRadius && !detailJurnal} />}
         {detailJurnal && p.belumJurnal.map((j, i) => <BarisDaftar key={j.id} judul={j.guru.nama}
           sub={`${j.kelas.nama} · ${j.mapel.nama} · jam ${j.jamMulai}–${j.jamSelesai} · ${j.lewat ? "terlambat" : "belum waktunya"}`}
@@ -143,9 +143,9 @@ export default function Pantauan() {
           sub="lihat lokasi di daftar kehadiran" kanan={<Panah />} onPress={keGuru} akhir />}
       </KartuDaftar> : <Kartu><T redup>Semua guru sudah absen dan semua jadwal sudah diisi.</T></Kartu>}
       <KehadiranKelas key={tanggal} kelas={p.perKelas} />
-      <Pressable accessibilityRole="button" accessibilityLabel={`Periksa jurnal, ${p.jadwal.belumDiperiksa} belum diperiksa`}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Periksa catatan mengajar, ${p.jadwal.belumDiperiksa} belum diperiksa`}
         style={({ pressed }) => [s.aksi, pressed && { opacity: 0.85 }]} onPress={keJurnal}>
-        <T tebal style={[s.putih, { flexShrink: 1 }]}>{tanggal === hariIni ? "Periksa jurnal hari ini" : "Periksa jurnal"}</T>
+        <T tebal style={[s.putih, { flexShrink: 1 }]}>{tanggal === hariIni ? "Periksa catatan hari ini" : "Periksa catatan mengajar"}</T>
         {p.jadwal.belumDiperiksa > 0 && <T tebal style={s.lencanaEmas}>{p.jadwal.belumDiperiksa}</T>}
       </Pressable>
     </>}

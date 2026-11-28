@@ -60,7 +60,7 @@ export default function KehadiranGuru() {
         const peta = a?.lat != null && a?.lng != null;
         const sub = a
           ? [jamDiZona(zona, a.waktuMasuk), a.dalamRadius === false ? "di luar area" : a.jarakMeter != null ? `±${a.jarakMeter} m` : null, a.keterangan].filter(Boolean).join(" · ")
-          : g.jadwal > 0 ? `${g.jadwal} jadwal · jurnal ${g.jurnal}/${g.jadwal}` : "Tidak ada jadwal";
+          : g.jadwal > 0 ? `${g.jadwal} jadwal · catatan ${g.jurnal}/${g.jadwal}` : "Tidak ada jadwal";
         const isi = <>
           {a ? <View style={[s.foto, { backgroundColor: a.dalamRadius === false ? W.kuningMuda : W.utamaMuda }]}>
             {a.adaFoto ? terlihat.has(g.id) && <FotoAman absenId={a.id} label={`Foto ${g.nama}`} style={{ width: 40, height: 48 }} /> : <Siluet />}

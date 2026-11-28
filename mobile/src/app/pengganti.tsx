@@ -35,7 +35,7 @@ export default function Pengganti() {
       <HeroSub judul="Guru pengganti" sub="Gantikan guru yang berhalangan" />
       <Kartu style={{ backgroundColor: "#E5EDFF", flexDirection: "row", alignItems: "center", borderRadius: 20, marginTop: 4 }}>
         <Ilustrasi width={76} height={68} />
-        <View style={{ flex: 1, gap: 4 }}><T tebal>Ada guru berhalangan?</T><T>Pilih jadwalnya, lalu isi absen &amp; jurnal sebagai pengganti.</T></View>
+        <View style={{ flex: 1, gap: 4 }}><T tebal>Ada guru berhalangan?</T><T>Pilih jadwalnya, lalu isi absen &amp; catatan mengajar sebagai pengganti.</T></View>
       </Kartu>
       <Segmen<"kosong" | "semua"> nilai={semua ? "semua" : "kosong"} onUbah={k => setSemua(k === "semua")} pilihan={[
         { kunci: "kosong", label: `Belum diisi ${kosong.length}` }, { kunci: "semua", label: `Semua ${jadwal.length}` },

@@ -35,9 +35,9 @@ function Navigasi() {
     }}>
       <Stack.Protected guard={login}>
         <Stack.Screen name="(tab)" options={{ headerShown: false }} />
-        <Stack.Screen name="isi/[jadwalId]" options={{ title: "Absen & Jurnal", headerShown: false }} />
+        <Stack.Screen name="isi/[jadwalId]" options={{ title: "Absen & Catatan", headerShown: false }} />
         <Stack.Screen name="pengganti" options={{ title: "Guru Pengganti", headerShown: false }} />
-        <Stack.Screen name="jurnal" options={{ title: "Periksa Jurnal", headerShown: false }} />
+        <Stack.Screen name="jurnal" options={{ title: "Periksa Catatan", headerShown: false }} />
         <Stack.Screen name="kehadiran-guru" options={{ title: "Kehadiran Guru", headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={!login}>
