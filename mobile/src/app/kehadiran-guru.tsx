@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Avatar, Hero } from "@/components/v2";
 import { Siluet } from "@/components/ilustrasi";
 import { useLocalSearchParams } from "expo-router";
@@ -67,7 +68,7 @@ export default function KehadiranGuru() {
         <Pressable accessibilityRole="button" accessibilityLabel={"Pilih tanggal, " + formatTanggal(tanggal)}
           accessibilityState={{ expanded: pilihTanggal }} onPress={() => setPilihTanggal(!pilihTanggal)}
           style={{ minHeight: 48, alignSelf: "flex-start", flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <T tebal ukuran={16} style={{ color: W.putih }}>{formatTanggal(tanggal)}</T><T style={{ color: W.putih }}>⌄</T>
+          <T tebal ukuran={16} style={{ color: W.putih }}>{formatTanggal(tanggal)}</T><Ionicons name="chevron-down" size={18} color={W.putih} />
         </Pressable>
         {data && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {[

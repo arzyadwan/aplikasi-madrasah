@@ -17,7 +17,7 @@ function Kepala({ tanggal, children, tumpang }: { tanggal: string; children?: Re
   return <Hero style={[s.kepala, tumpang && { paddingBottom: 80 }]}>
     <Baris>
       <Pressable accessibilityRole="button" accessibilityLabel="Buka akun" style={s.akun} onPress={() => router.navigate("/akun")}>
-        <T tebal ukuran={18} style={{ color: "#3D2600" }}>{pengguna.nama.trim().charAt(0).toUpperCase()}</T>
+        <T tebal ukuran={18} style={{ color: "#3D2600" }}>{namaPanggilan(pengguna.nama).charAt(0).toUpperCase()}</T>
       </Pressable>
       <View style={{ flex: 1 }}>
         <T ukuran={13} style={s.pucat}>Assalamu&apos;alaikum,</T>
@@ -51,11 +51,40 @@ function labelWaktu(mulai: number, akhir: number, sekarang: number, waktu: strin
 }
 
 export default function Beranda() {
-  const { pengguna, zona } = useSaya();
+  const { pengguna } = useSaya();
   if (pengguna.peran === "GURU" || pengguna.mengajar) return <BerandaGuru />;
-  return <Layar><Kepala tanggal={formatTanggal(tanggalDiZona(zona))} />
-    <Tombol judul="Buka pantauan madrasah" onPress={() => router.navigate("/pantauan")} />
-    <Tombol jenis="garis" judul="Absen pagi" onPress={() => router.navigate("/absen")} />
+  return <BerandaPimpinan />;
+}
+
+function BerandaPimpinan() {
+  const { zona } = useSaya();
+  const { data, memuat, muat } = useHariIni();
+  const antrean = useAntrean();
+  const bukti = useBuktiAbsen();
+  useFocusEffect(useCallback(() => { void muat(); }, [muat]));
+  const hari = tanggalDiZona(zona);
+  const a = data?.data.tanggal === hari ? data.absenSaya : null;
+  const pagi = antrean.find(x => x.path === "/api/absen-guru" && x.body.tanggal === hari);
+  const infoPagi = pagi?.galat ? "Perlu diperbaiki" : pagi ? "Tersimpan di HP"
+    : a ? LABEL_STATUS_GURU[a.status] + " · " + jamDiZona(zona, a.waktuMasuk) : bukti === hari ? "Selesai" : "Belum absen";
+  return <Layar segarkan={muat} memuat={memuat}>
+    <Kepala tanggal={formatTanggal(hari)} tumpang>
+      <T tebal ukuran={22} style={s.putih}>Pantau madrasah hari ini.</T>
+    </Kepala>
+    <Kartu style={[s.berikut, { gap: 12 }]}>
+      <Baris>
+        <View style={[s.ikonBesar, { backgroundColor: W.utamaMuda }]}><Ionicons name="stats-chart" size={22} color={W.utama} /></View>
+        <View style={{ flex: 1 }}><T tebal ukuran={17}>Pantauan madrasah</T><T redup ukuran={13}>Kehadiran siswa, guru, dan jurnal</T></View>
+      </Baris>
+      <Tombol judul="Buka pantauan" onPress={() => router.navigate("/pantauan")} />
+    </Kartu>
+    <Judul kecil>Menu</Judul>
+    <View style={s.grid}>
+      <Menu nama="Absen pagi" info={infoPagi} ikon="location-outline" warna={W.utama} latar={W.utamaMuda} buka={() => router.navigate("/absen")} />
+      <Menu nama="Kehadiran guru" info="Hari ini" ikon="people-outline" warna={W.biru} latar={W.biruMuda} buka={() => router.push({ pathname: "/kehadiran-guru", params: { tanggal: hari } })} />
+      <Menu nama="Periksa jurnal" info="Hari ini" ikon="document-text-outline" warna="#A4400E" latar="#FFE8DC" buka={() => router.push({ pathname: "/jurnal", params: { tanggal: hari } })} />
+      <Menu nama="Pengganti" info="Gantikan kelas" ikon="swap-horizontal-outline" warna="#6A44C2" latar="#EEE6FF" buka={() => router.push("/pengganti")} />
+    </View>
   </Layar>;
 }
 
@@ -145,5 +174,6 @@ const s = StyleSheet.create({
   jalur: { height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "#F5D99A" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   menu: { width: "48%", height: 72, backgroundColor: W.putih, borderRadius: 18, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 5 },
+  ikonBesar: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   ikon: { width: 30, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
 });

@@ -9,6 +9,7 @@ import { useAntrean } from "@/lib/antrean";
 import { konfirmasi } from "@/lib/konfirmasi";
 import { useSaya, useSesi } from "@/lib/sesi";
 import { LABEL_PERAN } from "@/lib/tipe";
+import { namaPanggilan } from "@/lib/nama";
 import { Baris, Kartu, Layar, Masukan, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
 
 export default function Akun() {
@@ -56,7 +57,7 @@ export default function Akun() {
           <Ionicons name="chevron-back" color={W.putih} size={22} />
         </Pressable>
         <View importantForAccessibility="no-hide-descendants" style={{ minWidth: 76, minHeight: 76, padding: 8, borderRadius: 50, borderWidth: 3, borderColor: W.putih, alignItems: "center", justifyContent: "center", backgroundColor: W.emas }}>
-          <T tebal ukuran={28} style={{ color: "#3D2600" }}>{Array.from(u.nama.trim())[0]?.toUpperCase()}</T>
+          <T tebal ukuran={28} style={{ color: "#3D2600" }}>{namaPanggilan(u.nama).charAt(0).toUpperCase()}</T>
         </View>
         <T tebal ukuran={22} style={{ color: W.putih, textAlign: "center" }}>{u.nama}</T>
         <T style={{ color: "#D6EDE2" }}>@{u.username}</T>
