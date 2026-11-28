@@ -57,6 +57,21 @@ export default function KelasSaya() {
             </View>)}
           </ScrollView>
         </>}
+        {(data?.sepekan?.filter(h => h.persen != null).length ?? 0) >= 2 && <>
+          <T ukuran={12} style={{ color: W.putih, marginTop: 6 }}>Kehadiran 6 hari sekolah terakhir</T>
+          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 6 }}>
+            {data!.sepekan!.map(h => {
+              const label = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"][new Date(h.tanggal + "T00:00:00Z").getUTCDay()];
+              return <View key={h.tanggal} accessible accessibilityLabel={`${label}, ${h.persen == null ? "belum ada data" : h.persen + "% hadir"}`}
+                style={{ flex: 1, alignItems: "center", gap: 3 }}>
+                <T ukuran={11} style={{ color: W.putih }}>{h.persen == null ? "–" : h.persen}</T>
+                <View style={{ alignSelf: "stretch", height: h.persen == null ? 2 : Math.max(4, h.persen * .44), borderRadius: 6,
+                  backgroundColor: h.persen == null ? "#2E8A6C" : h.tanggal === tanggal ? W.emas : "#3FA07F" }} />
+                <T ukuran={11} style={{ color: "#CFE8DD" }}>{label}</T>
+              </View>;
+            })}
+          </View>
+        </>}
       </Hero>
       {u.kelasWali.length > 1 && (
         <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>

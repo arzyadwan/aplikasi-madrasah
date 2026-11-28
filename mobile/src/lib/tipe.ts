@@ -21,6 +21,8 @@ export type Pengguna = {
 
 export type Saya = {
   pengguna: Pengguna;
+  /** Belum ada pada server lama */
+  profil?: { nip: string | null; mapel: string[] };
   madrasah: { nama: string; lat: number | null; lng: number | null; radiusMeter: number };
   zona: string;
   tanggal: string;
@@ -54,6 +56,7 @@ export type ItemJadwal = {
   milikSaya: boolean;
   siswa: SiswaRingkas[];
   pertemuan: PertemuanRingkas | null;
+  materiLalu?: { tanggal: string; materi: string } | null;
 };
 
 export type DataHariIni = { tanggal: string; tanggalTeks: string; penggunaId: string; jadwal: ItemJadwal[] };
@@ -94,6 +97,7 @@ export type ResponsWali = {
   jadwal: JadwalUmum[];
   siswa: { id: string; nama: string; nis: string | null }[];
   status: Record<string, Record<string, StatusSiswa>>;
+  sepekan?: { tanggal: string; persen: number | null }[];
 };
 
 export type ResponsPantauan = {
@@ -102,7 +106,7 @@ export type ResponsPantauan = {
   belumAbsen: { id: string; nama: string; berjadwal: boolean }[];
   jadwal: { total: number; terisi: number; belumDiperiksa: number };
   belumJurnal: (JadwalUmum & { lewat: boolean })[];
-  siswa: { persenHadir: number | null };
+  siswa: { persenHadir: number | null; persenPekanLalu?: number | null };
   perKelas: { id: string; nama: string; jumlahSiswa: number; jadwal: number; terisi: number; rekap: Rekap; tidakHadir: { nama: string; status: string[] }[] }[];
 };
 

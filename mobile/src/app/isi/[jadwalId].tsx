@@ -53,7 +53,7 @@ export default function IsiPertemuan() {
       const tanggal = lokal?.jadwal ? hari : r?.data.tanggal ?? "";
       const materiLalu = item && r?.data.tanggal === tanggal ? r.data.jadwal
         .filter(j => j.kelas.id === item.kelas.id && j.mapel.id === item.mapel.id && j.jamSelesai < item.jamMulai && j.pertemuan?.materi.trim())
-        .sort((a, b) => b.jamSelesai - a.jamSelesai)[0]?.pertemuan?.materi : undefined;
+        .sort((a, b) => b.jamSelesai - a.jamSelesai)[0]?.pertemuan?.materi ?? item.materiLalu?.materi : undefined;
       if (aktif) setMuatan({ kunci, item, tanggal, materiLalu, offline, galat, draf, lokal });
     }
     buka().catch(() => { if (aktif) setMuatan({ kunci, tanggal: "", offline: false, galat: "Penyimpanan HP tidak dapat dibaca." }); });

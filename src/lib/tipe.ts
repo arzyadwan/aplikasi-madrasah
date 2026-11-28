@@ -33,6 +33,8 @@ export type ItemJadwal = {
   milikSaya: boolean;
   siswa: SiswaRingkas[];
   pertemuan: PertemuanRingkas | null;
+  /** Materi pertemuan terakhir untuk kelas dan mapel yang sama (sebelum tanggal ini) */
+  materiLalu?: { tanggal: string; materi: string } | null;
 };
 
 export type DataHariIni = {

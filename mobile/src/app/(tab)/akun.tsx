@@ -13,7 +13,7 @@ import { namaPanggilan } from "@/lib/nama";
 import { Baris, Kartu, Layar, Masukan, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
 
 export default function Akun() {
-  const { pengguna: u, madrasah } = useSaya();
+  const { pengguna: u, madrasah, profil } = useSaya();
   const { alamat, keluar, gantiToken } = useSesi();
   const antrean = useAntrean();
   const gagal = antrean.filter(x => x.galat).length;
@@ -60,11 +60,11 @@ export default function Akun() {
           <T tebal ukuran={28} style={{ color: "#3D2600" }}>{namaPanggilan(u.nama).charAt(0).toUpperCase()}</T>
         </View>
         <T tebal ukuran={22} style={{ color: W.putih, textAlign: "center" }}>{u.nama}</T>
-        <T style={{ color: "#D6EDE2" }}>@{u.username}</T>
+        <T style={{ color: "#D6EDE2" }}>{profil?.nip ? `NIP ${profil.nip}` : `@${u.username}`}</T>
       </Hero>
       <Kartu style={{ marginTop: -40, borderRadius: 20 }}>
         <Baris style={{ alignItems: "flex-start" }}>
-          {[[LABEL_PERAN[u.peran], "Peran"], ...(u.kelasWali.length ? [[u.kelasWali.map(k => k.nama).join(", "), "Wali kelas"]] : []), [madrasah.nama, "Madrasah"]].map(([nilai, label]) =>
+          {[[LABEL_PERAN[u.peran], "Peran"], ...(u.kelasWali.length ? [[u.kelasWali.map(k => k.nama).join(", "), "Wali kelas"]] : []), profil?.mapel.length ? [profil.mapel.join(", "), "Mapel"] : [madrasah.nama, "Madrasah"]].map(([nilai, label]) =>
             <View key={label} style={{ flex: 1, alignItems: "center", gap: 4 }}>
               <T tebal numberOfLines={2} ukuran={nilai.length > 12 ? 13 : 16} style={{ textAlign: "center" }}>{nilai}</T><T ringkas redup ukuran={12}>{label}</T>
             </View>)}

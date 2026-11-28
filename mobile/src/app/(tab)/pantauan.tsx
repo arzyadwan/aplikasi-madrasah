@@ -65,6 +65,12 @@ function GrafikKelas({ kelas }: { kelas: ResponsPantauan["perKelas"] }) {
   </Kartu>;
 }
 
+function trenPekanLalu(kini: number | null, lalu?: number | null) {
+  if (kini == null || lalu == null) return "";
+  const beda = kini - lalu;
+  return beda === 0 ? " · sama dengan pekan lalu" : ` · ${beda > 0 ? "naik" : "turun"} ${Math.abs(beda)}% dari pekan lalu`;
+}
+
 export default function Pantauan() {
   const { zona, madrasah } = useSaya();
   const hariIni = tanggalDiZona(zona);
@@ -88,7 +94,7 @@ export default function Pantauan() {
         <Ionicons name="chevron-down" color="white" size={16} />
       </Pressable>
       {pilihTanggal && <NavTanggal tanggal={tanggal} teks={formatTanggal(tanggal)} maks={hariIni} onUbah={t => { setTanggal(t); setDetail(null); }} />}
-      {p && <View><T tebal ukuran={40} style={s.putih}>{p.siswa.persenHadir == null ? "—" : p.siswa.persenHadir + "%"}</T><T style={s.putih}>siswa hadir</T></View>}
+      {p && <View><T tebal ukuran={40} style={s.putih}>{p.siswa.persenHadir == null ? "—" : p.siswa.persenHadir + "%"}</T><T style={s.putih}>siswa hadir{trenPekanLalu(p.siswa.persenHadir, p.siswa.persenPekanLalu)}</T></View>}
     </Hero>
     {p && <View style={[s.angka, { marginTop: -28 }]}>
       <Angka ikon="people-outline" label="Guru hadir" nilai={p.guru.hadir} total={p.guru.total} />

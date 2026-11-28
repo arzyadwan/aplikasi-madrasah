@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "./db";
+import { materiTerakhir } from "./data-tambahan";
 import { dariDbDate, formatTanggal, keDbDate, nomorHari } from "./waktu";
 import type { DataHariIni, ItemJadwal } from "./tipe";
 
@@ -76,11 +77,12 @@ export async function dataHariIni(penggunaId: string, tanggal: string, tambahanJ
     include: includeJadwal(tanggal),
     orderBy: [{ jamMulai: "asc" }],
   });
+  const lalu = await materiTerakhir(jadwal.map((j) => ({ kelasId: j.kelasId, mapelId: j.mapelId })), tanggal);
   return {
     tanggal,
     tanggalTeks: formatTanggal(tanggal),
     penggunaId,
-    jadwal: jadwal.map((j) => keItem(j, penggunaId, peta)),
+    jadwal: jadwal.map((j) => ({ ...keItem(j, penggunaId, peta), materiLalu: lalu.get(`${j.kelasId}|${j.mapelId}`) ?? null })),
   };
 }
 
