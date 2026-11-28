@@ -33,7 +33,7 @@ export default function LayoutTab() {
           if (!route) return null;
           const aktif = state.routes[state.index].key === route.key;
           const opsi = descriptors[route.key].options;
-          const warna = aktif ? W.putih : W.redup;
+          const warna = aktif ? W.utama : W.redup;
           const label = typeof opsi.tabBarLabel === "string" ? opsi.tabBarLabel : opsi.title;
           return <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: aktif }}
             accessibilityLabel={opsi.title} onLongPress={() => emitter.emit({ type: "tabLongPress", target: route.key })}
@@ -42,12 +42,11 @@ export default function LayoutTab() {
               if (!aktif && !event.defaultPrevented) { getar(); navigateToTab(route.key); }
             }}
             style={{ flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 3 }}>
-            <View style={{ width: 56, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
-              backgroundColor: aktif ? W.utama : "transparent" }}>
-              {opsi.tabBarIcon?.({ focused: aktif, color: warna, size: 20 })}
+            <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+              {opsi.tabBarIcon?.({ focused: aktif, color: warna, size: aktif ? 25 : 23 })}
             </View>
             <Text numberOfLines={1} maxFontSizeMultiplier={1.15} adjustsFontSizeToFit minimumFontScale={0.8}
-              style={{ ...huruf(aktif ? 700 : 500), fontSize: 11, color: aktif ? W.utama : W.redup }}>{label}</Text>
+              style={{ ...huruf(aktif ? 700 : 500), fontSize: 11, color: warna }}>{label}</Text>
           </Pressable>;
         })}
         </View>
