@@ -23,14 +23,12 @@ export default function LayoutTab() {
   const urutan = ["index", "absen", "kelas", "riwayat", "pantauan"].filter(nama =>
     nama === "riwayat" ? mengajar : nama === "kelas" ? u.kelasWali.length > 0 : nama === "pantauan" ? pimpinan : true);
   return (
-    <Tabs tabBar={({ state, descriptors, emitter, navigateToTab }) => (
+    <Tabs tabBar={({ state, descriptors, emitter, navigateToTab }) => { const tampil = urutan.flatMap(n => state.routes.filter(r => r.name === n)); return (
       <View style={{ backgroundColor: W.latar, paddingBottom: insets.bottom + 10,
         paddingLeft: insets.left + 12, paddingRight: insets.right + 12, paddingTop: 4 }}>
         <View style={{ flexDirection: "row", alignItems: "center", minHeight: 68,
           backgroundColor: W.putih, borderRadius: 22, paddingHorizontal: 4, elevation: 5, shadowColor: "#0C3C2D" }}>
-        {urutan.map(nama => {
-          const route = state.routes.find(r => r.name === nama);
-          if (!route) return null;
+        {tampil.map(route => {
           const aktif = state.routes[state.index].key === route.key;
           const opsi = descriptors[route.key].options;
           const warna = aktif ? W.utama : W.redup;
@@ -41,7 +39,7 @@ export default function LayoutTab() {
               const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!aktif && !event.defaultPrevented) { getar(); navigateToTab(route.key); }
             }}
-            style={{ flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 3 }}>
+            style={{ width: `${100 / tampil.length}%`, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 3 }}>
             <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
               {opsi.tabBarIcon?.({ focused: aktif, color: warna, size: aktif ? 25 : 23 })}
             </View>
@@ -51,7 +49,7 @@ export default function LayoutTab() {
         })}
         </View>
       </View>
-    )}
+    ); }}
       screenOptions={{
         header: headerRingkas,
         headerStyle: { backgroundColor: W.utamaTua },
