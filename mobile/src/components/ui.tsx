@@ -37,12 +37,12 @@ export function Layar({ children, segarkan, memuat, scrollRef }: PropsWithChildr
 }
 
 /** Satu permukaan gulir untuk formulir dan baris yang dirender sesuai kebutuhan. */
-export function Daftar<T extends { id: string }>({ children, ...props }: PropsWithChildren<FlatListProps<T>>) {
+export function Daftar<T extends { id: string }>({ children, contentContainerStyle, ...props }: PropsWithChildren<FlatListProps<T>>) {
   const { bottom } = useSafeAreaInsets();
   const [grup] = useSegments();
   return <FlatList {...props} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled"
     style={{ flex: 1, backgroundColor: W.latar }}
-    contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 16 + (grup === "(tab)" ? 0 : bottom) }}
+    contentContainerStyle={[{ padding: 16, gap: 12, paddingBottom: 16 + (grup === "(tab)" ? 0 : bottom) }, contentContainerStyle]}
     ListHeaderComponent={<View style={{ gap: 12 }}>{children}</View>} />;
 }
 

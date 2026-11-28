@@ -61,7 +61,7 @@ export default function Riwayat() {
       </View>;
     }}>
       <Hero style={{ marginHorizontal: -16, marginTop: -16 }}>
-        <T tebal ukuran={22} style={{ color: W.putih }}>Riwayat jurnal</T>
+        <T tebal ukuran={22} style={{ color: W.putih }}>Riwayat mengajar</T>
         {data && <Baris style={{ alignItems: "stretch" }}>
           {statistik.map(([nilai, label]) => <View key={label} style={{ flex: 1, gap: 3, backgroundColor: "#1B7258", padding: 10, borderRadius: 14 }}>
             <T ringkas tebal ukuran={20} style={{ color: W.putih }}>{nilai}</T><T ringkas ukuran={12} style={{ color: W.putih }}>{label}</T>
@@ -77,7 +77,7 @@ export default function Riwayat() {
         </Pressable>)}
       </ScrollView>
       {galat && <Pesan jenis="galat" teks={galat} />}
-      {data && !tampil.length && <Kartu><T redup>Belum ada jurnal.</T></Kartu>}
+      {data && !tampil.length && <Kartu><T redup>Belum ada catatan mengajar.</T></Kartu>}
     </Daftar>
   );
 }

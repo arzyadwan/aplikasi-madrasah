@@ -41,7 +41,7 @@ export default function Login() {
           <Hero style={{ alignItems: "center", paddingTop: 28, paddingBottom: 62, borderBottomLeftRadius: 40, borderBottomRightRadius: 40 }}>
             <Madrasah width={190} height={150} />
             <T tebal ukuran={22} style={{ color: W.putih }}>Aplikasi Madrasah</T>
-            <T style={{ color: "#DBF1E7" }}>Kehadiran &amp; jurnal mengajar</T>
+            <T style={{ color: "#DBF1E7" }}>Kehadiran &amp; catatan mengajar</T>
           </Hero>
           <Kartu style={{ marginHorizontal: 16, marginTop: -36, borderRadius: 24, padding: 20, gap: 14 }}>
             <Judul kecil>Assalamu'alaikum</Judul>

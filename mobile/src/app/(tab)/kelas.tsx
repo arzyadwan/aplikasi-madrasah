@@ -88,7 +88,7 @@ export default function KelasSaya() {
             <Avatar nama={siswa.nama} status={siswa.jamAbsen[0].kode} size={36} />
             <View style={{ flex: 1 }}><T tebal>{siswa.nama}</T><T redup ukuran={12}>{siswa.jamAbsen.map(j => LABEL_STATUS_SISWA[j.kode] + " · jam " + j.jam).join(", ")}</T></View>
           </Baris>) : <T redup>Belum ada ketidakhadiran tercatat.</T>}</Kartu>
-          <Baris><Judul kecil>Jurnal kelas</Judul><T redup ukuran={12}>{data.jadwal.filter(j => j.pertemuan).length} dari {data.jadwal.length} terisi</T></Baris>
+          <Baris><Judul kecil>Catatan mengajar</Judul><T redup ukuran={12}>{data.jadwal.filter(j => j.pertemuan).length} dari {data.jadwal.length} terisi</T></Baris>
           {data.jadwal.length === 0 && <Kartu><T redup>Tidak ada jadwal.</T></Kartu>}
           {data.jadwal.map((j) => (
             <Kartu key={j.id}>

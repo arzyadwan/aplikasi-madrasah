@@ -74,7 +74,7 @@ function BerandaPimpinan() {
     <Kartu style={[s.berikut, { gap: 12 }]}>
       <Baris>
         <View style={[s.ikonBesar, { backgroundColor: W.utamaMuda }]}><Ionicons name="stats-chart" size={22} color={W.utama} /></View>
-        <View style={{ flex: 1 }}><T tebal ukuran={17}>Pantauan madrasah</T><T redup ukuran={13}>Kehadiran siswa, guru, dan jurnal</T></View>
+        <View style={{ flex: 1 }}><T tebal ukuran={17}>Pantauan madrasah</T><T redup ukuran={13}>Kehadiran siswa, guru, dan catatan mengajar</T></View>
       </Baris>
       <Tombol judul="Buka pantauan" onPress={() => router.navigate("/pantauan")} />
     </Kartu>
@@ -82,7 +82,7 @@ function BerandaPimpinan() {
     <View style={s.grid}>
       <Menu nama="Absen pagi" info={infoPagi} ikon="location-outline" warna={W.utama} latar={W.utamaMuda} buka={() => router.navigate("/absen")} />
       <Menu nama="Kehadiran guru" info="Hari ini" ikon="people-outline" warna={W.biru} latar={W.biruMuda} buka={() => router.push({ pathname: "/kehadiran-guru", params: { tanggal: hari } })} />
-      <Menu nama="Periksa jurnal" info="Hari ini" ikon="document-text-outline" warna="#A4400E" latar="#FFE8DC" buka={() => router.push({ pathname: "/jurnal", params: { tanggal: hari } })} />
+      <Menu nama="Periksa catatan" info="Hari ini" ikon="document-text-outline" warna="#A4400E" latar="#FFE8DC" buka={() => router.push({ pathname: "/jurnal", params: { tanggal: hari } })} />
       <Menu nama="Pengganti" info="Gantikan kelas" ikon="swap-horizontal-outline" warna="#6A44C2" latar="#EEE6FF" buka={() => router.push("/pengganti")} />
     </View>
   </Layar>;
@@ -126,7 +126,7 @@ function BerandaGuru() {
         <View style={s.waktu}><T tebal ukuran={12} style={{ color: W.kuning }}>{labelWaktu(mulai, akhir, sekarang, berikut.waktu)}</T></View>
         <T tebal ukuran={18}>{berikut.mapel.nama}</T><T redup>Kelas {berikut.kelas.nama} · {berikut.waktu}</T>
       </View><Guru width={92} height={80} /></Baris>
-      <Tombol judul="Isi absen & jurnal" onPress={() => buka(berikut.id)} />
+      <Tombol judul="Isi absen & catatan" onPress={() => buka(berikut.id)} />
     </Kartu>}
     {offline && <Pesan jenis="antre" teks={data ? "Sedang offline. Menampilkan jadwal yang tersimpan di HP." : "Belum ada jadwal tersimpan di HP. Sambungkan internet untuk memuat jadwal."} />}
     {data && tanggal !== hari && <Pesan jenis="galat" teks={`Jadwal ini dari ${data.data.tanggalTeks}. Sambungkan internet lalu tarik layar ke bawah untuk memuat jadwal hari ini.`} />}
