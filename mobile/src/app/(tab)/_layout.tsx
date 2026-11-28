@@ -5,6 +5,7 @@ import { Tabs } from "expo-router";
 import { useSaya } from "@/lib/sesi";
 import { StatusSinkron } from "@/components/status-sinkron";
 import { huruf, W } from "@/components/ui";
+import { getar } from "@/components/v2";
 
 type NamaIkon = keyof typeof Ionicons.glyphMap;
 function ikon(nama: NamaIkon, aktif: NamaIkon) {
@@ -25,28 +26,28 @@ export default function LayoutTab() {
     <Tabs tabBar={({ state, descriptors, emitter, navigateToTab }) => (
       <View style={{ backgroundColor: W.latar, paddingBottom: insets.bottom + 10,
         paddingLeft: insets.left + 12, paddingRight: insets.right + 12, paddingTop: 4 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 64,
-          backgroundColor: W.putih, borderRadius: 22, paddingHorizontal: 8, elevation: 5, shadowColor: "#0C3C2D" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", minHeight: 68,
+          backgroundColor: W.putih, borderRadius: 22, paddingHorizontal: 4, elevation: 5, shadowColor: "#0C3C2D" }}>
         {urutan.map(nama => {
           const route = state.routes.find(r => r.name === nama);
           if (!route) return null;
           const aktif = state.routes[state.index].key === route.key;
           const opsi = descriptors[route.key].options;
           const warna = aktif ? W.putih : W.redup;
+          const label = typeof opsi.tabBarLabel === "string" ? opsi.tabBarLabel : opsi.title;
           return <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: aktif }}
             accessibilityLabel={opsi.title} onLongPress={() => emitter.emit({ type: "tabLongPress", target: route.key })}
             onPress={() => {
               const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-              if (!aktif && !event.defaultPrevented) navigateToTab(route.key);
+              if (!aktif && !event.defaultPrevented) { getar(); navigateToTab(route.key); }
             }}
-            style={{ minWidth: 48, minHeight: 48, maxWidth: "45%", flexShrink: 1, paddingHorizontal: aktif ? 12 : 0,
-              flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", borderRadius: 24,
-              backgroundColor: aktif ? W.utama : W.putih }}>
-            {opsi.tabBarIcon?.({ focused: aktif, color: warna, size: 21 })}
-            {aktif && <Text numberOfLines={1} maxFontSizeMultiplier={1.2} adjustsFontSizeToFit minimumFontScale={0.8}
-              style={{ flexShrink: 1, ...huruf(700), fontSize: 13, color: warna }}>
-              {typeof opsi.tabBarLabel === "string" ? opsi.tabBarLabel : opsi.title}
-            </Text>}
+            style={{ flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 3 }}>
+            <View style={{ width: 56, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
+              backgroundColor: aktif ? W.utama : "transparent" }}>
+              {opsi.tabBarIcon?.({ focused: aktif, color: warna, size: 20 })}
+            </View>
+            <Text numberOfLines={1} maxFontSizeMultiplier={1.15} adjustsFontSizeToFit minimumFontScale={0.8}
+              style={{ ...huruf(aktif ? 700 : 500), fontSize: 11, color: aktif ? W.utama : W.redup }}>{label}</Text>
           </Pressable>;
         })}
         </View>

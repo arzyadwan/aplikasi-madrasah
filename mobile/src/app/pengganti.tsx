@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Pengganti as Ilustrasi } from "@/components/ilustrasi";
 import { useMuat } from "@/lib/muat";
 import type { JadwalUmum } from "@/lib/tipe";
-import { Baris, Daftar, Kartu, Memuat, Pesan, T, Tombol, W } from "@/components/ui";
+import { Baris, Daftar, Kartu, Layar, Pesan, T, Tombol, W } from "@/components/ui";
+import { HeroSub, Kerangka, LatarStatus, Segmen } from "@/components/v2";
 
 export default function Pengganti() {
   const { data, galat, memuat, muat } = useMuat<{ jadwal: JadwalUmum[] }>("/api/m/pengganti");
@@ -13,8 +14,8 @@ export default function Pengganti() {
   const kosong = jadwal.filter(j => !j.pertemuan);
   const tampil = semua ? jadwal : kosong;
 
-  if (!data && !galat) return <Memuat />;
-  return (
+  if (!data && !galat) return <Layar><HeroSub judul="Guru pengganti" sub="Memuat jadwal…" /><Kerangka baris={4} /></Layar>;
+  return (<View style={{ flex: 1 }}>
     <Daftar data={tampil} refreshing={memuat} onRefresh={muat} renderItem={({ item: j, index }) => {
       const gantikan = <Tombol jenis={index ? "garis" : "utama"} judul="Gantikan" onPress={() => router.push({ pathname: "/isi/[jadwalId]", params: { jadwalId: j.id } })} />;
       const [bg, fg] = [["#FFE8DC", "#893508"], ["#EEE6FF", "#5836A1"], [W.utamaMuda, W.utama]][index % 3];
@@ -31,18 +32,17 @@ export default function Pengganti() {
         {j.pertemuan ? <T tebal style={{ color: W.utama }}>Diisi {j.pertemuan.namaGuru}</T> : !index && gantikan}
       </Kartu>;
     }}>
-      <Kartu style={{ backgroundColor: "#E5EDFF", flexDirection: "row", alignItems: "center", borderRadius: 20 }}>
+      <HeroSub judul="Guru pengganti" sub="Gantikan guru yang berhalangan" />
+      <Kartu style={{ backgroundColor: "#E5EDFF", flexDirection: "row", alignItems: "center", borderRadius: 20, marginTop: 4 }}>
         <Ilustrasi width={76} height={68} />
         <View style={{ flex: 1, gap: 4 }}><T tebal>Ada guru berhalangan?</T><T>Pilih jadwalnya, lalu isi absen &amp; jurnal sebagai pengganti.</T></View>
       </Kartu>
-      <Baris style={{ justifyContent: "flex-start", flexWrap: "wrap" }}>
-        {[false, true].map(v => <Pressable key={String(v)} accessibilityRole="button" accessibilityState={{ selected: semua === v }} onPress={() => setSemua(v)}
-          style={{ minHeight: 48, justifyContent: "center", borderRadius: 24, paddingHorizontal: 15, backgroundColor: semua === v ? W.teks : W.putih }}>
-          <T tebal style={{ color: semua === v ? W.putih : W.teks }}>{v ? "Semua" : "Belum diisi"} {data ? (v ? jadwal.length : kosong.length) : ""}</T>
-        </Pressable>)}
-      </Baris>
+      <Segmen<"kosong" | "semua"> nilai={semua ? "semua" : "kosong"} onUbah={k => setSemua(k === "semua")} pilihan={[
+        { kunci: "kosong", label: `Belum diisi ${kosong.length}` }, { kunci: "semua", label: `Semua ${jadwal.length}` },
+      ]} />
       {galat && <Pesan jenis="galat" teks={galat} />}
       {data && !tampil.length && <Kartu><T redup>{jadwal.length ? "Semua jadwal sudah diisi." : "Tidak ada jadwal lain hari ini."}</T></Kartu>}
     </Daftar>
-  );
+    <LatarStatus />
+  </View>);
 }
