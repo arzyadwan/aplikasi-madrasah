@@ -1,16 +1,18 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import NetInfo from "@react-native-community/netinfo";
 import { useEffect, useState } from "react";
-import { Alert, AppState, Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, AppState, FlatList, Image, Modal, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hapusDariAntrean, isiAntrean, sinkronkan, useAntrean, useTerkirim } from "@/lib/antrean";
 
 import { router } from "expo-router";
-import { T, Tombol, W } from "./ui";
+import { Judul, Kartu, T, Tombol, W } from "./ui";
 import { useSaya } from "@/lib/sesi";
 import { tanggalDiZona } from "@/lib/waktu";
 
 /** Penanda di header: offline / jumlah isian yang menunggu dikirim. Kirim otomatis saat online. */
 export function StatusSinkron() {
+  const insets = useSafeAreaInsets();
   const antrean = useAntrean();
   const terakhir = useTerkirim();
   const { zona } = useSaya();
@@ -37,13 +39,17 @@ export function StatusSinkron() {
   return <>
     <Pressable accessibilityRole="button" onPress={() => setBuka(true)} accessibilityLabel={`Antrean pengiriman. ${teks}`} style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center", flexDirection: "row" }}>
       <Ionicons name={gagal ? "alert-circle-outline" : !online ? "cloud-offline-outline" : antrean.length ? "cloud-upload-outline" : "checkmark-circle-outline"} size={22} color={W.putih} />
-      {antrean.length > 0 && <Text style={{ color: W.putih }}>{antrean.length}</Text>}
+      {antrean.length > 0 && <Text maxFontSizeMultiplier={1.2} style={{ color: W.putih }}>{antrean.length}</Text>}
     </Pressable>
     <Modal visible={buka} onRequestClose={() => setBuka(false)} animationType="slide">
-      <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
-        <Tombol jenis="garis" judul="Tutup" onPress={() => setBuka(false)} />
-        {terakhir && <T>Terkirim · {terakhir}</T>}
-        {antrean.map(x => <View key={x.id} style={{ gap: 6 }}>
+      <FlatList data={antrean} keyExtractor={x => x.id} style={{ backgroundColor: W.latar }}
+        contentContainerStyle={{ padding: 16, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, gap: 12 }}
+        ListHeaderComponent={<View style={{ gap: 10 }}>
+          <Judul>Antrean pengiriman</Judul>
+          {terakhir && <T>Terkirim · {terakhir}</T>}
+          <Tombol jenis="garis" judul="Tutup" onPress={() => setBuka(false)} />
+        </View>}
+        renderItem={({ item: x }) => <Kartu>
           <T tebal>{x.label}</T>
           <T>{x.galat ? `Perlu diperbaiki. ${x.galat}` : `Tersimpan di HP, menunggu dikirim. ${x.alasanTunda ?? ""}`}</T>
           {x.galat && <>
@@ -65,9 +71,8 @@ export function StatusSinkron() {
               { text: "Batal" }, { text: "Buang", style: "destructive", onPress: () => { void hapusDariAntrean(x.id).catch(() => Alert.alert("Gagal membuang isian.")); } },
             ])} />
           </>}
-        </View>)}
-        {!!tunggu && <Tombol judul="Kirim sekarang" onPress={() => { void sinkronkan().catch(() => Alert.alert("Gagal menyimpan antrean.")); }} />}
-      </ScrollView>
+        </Kartu>}
+        ListFooterComponent={tunggu ? <Tombol judul="Kirim sekarang" onPress={() => { void sinkronkan().catch(() => Alert.alert("Gagal menyimpan antrean.")); }} /> : undefined} />
     </Modal>
   </>;
 }

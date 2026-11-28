@@ -1,16 +1,20 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Hero } from "@/components/v2";
+import { Sukses } from "@/components/ilustrasi";
+import { namaPanggilan } from "@/lib/nama";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image, Linking, Platform, Pressable, Text, View } from "react-native";
+import { Image, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { idBaru, kirimAtauAntre, useAntrean, useBuktiAbsen, type ItemAntrean } from "@/lib/antrean";
 import { useHariIni } from "@/lib/hari-ini";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_GURU, type StatusGuru } from "@/lib/tipe";
 import { formatTanggal, jamDiZona, jarakMeter, tanggalDiZona } from "@/lib/waktu";
 import { FotoAman } from "@/components/foto-aman";
-import { Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
+import { huruf, Kartu, Lencana, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
 
 type Lokasi = { lat: number; lng: number; akurasi: number };
 
@@ -28,7 +32,7 @@ function jarakTeks(meter: number) {
 }
 
 export default function AbsenSaya() {
-  const { zona } = useSaya();
+  const { zona, pengguna } = useSaya();
   const { data, memuat, muat } = useHariIni();
   const { antreanId } = useLocalSearchParams<{ antreanId?: string }>();
   const antrean = useAntrean();
@@ -41,35 +45,53 @@ export default function AbsenSaya() {
   if (!lokal && bukti !== tanggal && !data && memuat) return <Memuat />;
   const a = data?.data.tanggal === tanggal ? data.absenSaya : null;
 
+  const tercatat = a && !(lokal?.galat && lokal.id === antreanId);
+  const bukaForm = !tercatat && bukti !== tanggal && (!lokal || !!lokal.galat) && (!!lokal?.galat || data?.data.tanggal === tanggal);
+  const kepala = <View>
+    <T ukuran={13} style={{ color: "#BFE0D3" }}>{formatTanggal(tanggal)} · {jamDiZona(zona, new Date())}</T>
+    <Text accessibilityRole="header" style={[g.judul, huruf(700)]}>Absen pagi</Text>
+  </View>;
+
+  if (bukaForm) return <FormAbsen key={lokal?.id ?? tanggal} lokal={lokal} tanggal={tanggal}
+    kepala={kepala} memuat={memuat} onSelesai={muat} />;
+
+  if (a && tercatat) return <ScrollView style={{ backgroundColor: W.putih }} contentContainerStyle={g.sukses}
+    refreshControl={<RefreshControl refreshing={memuat} onRefresh={muat} colors={[W.utama]} />}>
+    <View style={{ flexGrow: 1 }} /><Sukses width={200} height={172} />
+    <T tebal ukuran={22} style={g.teksTengah}>Absen tercatat!</T>
+    <T redup style={g.teksTengah}>Terima kasih, {namaPanggilan(pengguna.nama)}.</T>
+    <View style={g.rincian}>
+      <BarisRincian label="Status" nilai={LABEL_STATUS_GURU[a.status]} />
+      <BarisRincian label="Jam tercatat" nilai={jamDiZona(zona, a.waktuMasuk)} />
+      {a.dalamRadius != null && <BarisRincian label="Lokasi" nilai={a.dalamRadius ? "Di area madrasah" : "Di luar area madrasah"} />}
+      {a.jarakMeter != null && <BarisRincian label="Jarak" nilai={jarakTeks(a.jarakMeter)} />}
+      {!!a.keterangan && <BarisRincian label="Keterangan" nilai={a.keterangan} />}
+    </View>
+    {a.adaFoto && (
+      <FotoAman absenId={a.id} label="Foto absen" style={{ width: 140, height: 180, borderRadius: 10, marginTop: 6 }} />
+    )}
+    <View style={{ alignSelf: "stretch", marginTop: "auto" }}>
+      <Tombol judul="Lihat jadwal hari ini" onPress={() => router.navigate("/")} />
+    </View>
+  </ScrollView>;
+
   return (
     <Layar segarkan={muat} memuat={memuat}>
-      <View>
-        <Judul>Absen saya</Judul>
-        <T redup>{formatTanggal(tanggal)}</T>
-      </View>
-      {a && !(lokal?.galat && lokal.id === antreanId) ? (
-        <Kartu>
-          <T tebal ukuran={18} style={{ color: W.utama }}>{LABEL_STATUS_GURU[a.status]}</T>
-          <T redup>Tercatat pukul {jamDiZona(zona, a.waktuMasuk)}</T>
-          {a.jarakMeter != null && <T redup>Jarak dari madrasah ±{jarakTeks(a.jarakMeter)}{a.dalamRadius === false ? " (di luar area madrasah)" : ""}</T>}
-          {a.keterangan && <T redup>Keterangan: {a.keterangan}</T>}
-          {a.adaFoto && (
-            <FotoAman absenId={a.id} label="Foto absen" style={{ width: 140, height: 180, borderRadius: 10, marginTop: 6 }} />
-          )}
-        </Kartu>
-      ) : bukti === tanggal ? <Pesan jenis="ok" teks="Terkirim. Menunggu pembaruan status server." /> : lokal && !lokal.galat ? (
+      <Hero style={g.hero}>{kepala}</Hero>
+      {bukti === tanggal ? <Pesan jenis="ok" teks="Terkirim. Menunggu pembaruan status server." /> : lokal && !lokal.galat ? (
         <Pesan jenis="antre" teks="Tersimpan di HP, menunggu dikirim." />
       ) : (
-        lokal?.galat || data?.data.tanggal === tanggal ?
-          <><T>{lokal?.galat ? `Perlu diperbaiki. ${lokal.galat}` : "Belum absen"}</T>
-          <FormAbsen key={lokal?.id ?? tanggal} lokal={lokal} tanggal={tanggal} onSelesai={muat} /></>
-          : <><Pesan jenis="info" teks="Status belum dapat diperiksa." /><Tombol judul="Coba lagi" onPress={muat} /></>
+        <><Pesan jenis="info" teks="Status belum dapat diperiksa." /><Tombol judul="Coba lagi" onPress={muat} /></>
       )}
     </Layar>
   );
 }
 
-function FormAbsen({ tanggal, onSelesai, lokal }: { lokal?: ItemAntrean; tanggal: string; onSelesai: () => void }) {
+function BarisRincian({ label, nilai }: { label: string; nilai: string }) {
+  return <View style={[g.baris, { justifyContent: "space-between" }]}><T redup>{label}</T><T tebal>{nilai}</T></View>;
+}
+
+function FormAbsen({ tanggal, onSelesai, lokal, kepala, memuat }: { kepala: React.ReactNode; memuat: boolean; lokal?: ItemAntrean; tanggal: string; onSelesai: () => void }) {
   const { madrasah, zona } = useSaya();
   const [status, setStatus] = useState<StatusGuru>((lokal?.body.status as StatusGuru) ?? "HADIR");
   const [lokasi, setLokasi] = useState<Lokasi | null>(() => typeof lokal?.body.lat === "number" && typeof lokal.body.lng === "number" ? { lat: lokal.body.lat, lng: lokal.body.lng, akurasi: Number(lokal.body.akurasi) } : null);
@@ -169,46 +191,99 @@ function FormAbsen({ tanggal, onSelesai, lokal }: { lokal?: ItemAntrean; tanggal
 
   const jarak = lokasi && madrasah.lat != null && madrasah.lng != null ? jarakMeter(lokasi.lat, lokasi.lng, madrasah.lat, madrasah.lng) : null;
 
-  return (
-    <Kartu style={{ gap: 14 }}>
-      <View style={{ gap: 6 }}>
-        <T tebal ukuran={14}>Status</T>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-          {(Object.keys(LABEL_STATUS_GURU) as StatusGuru[]).map((s) => (
-            <Pressable key={s} accessibilityRole="radio" accessibilityState={{ checked: status === s }} accessibilityLabel={LABEL_STATUS_GURU[s]}
-              onPress={() => { if (s !== status) { setPercobaan(0); setStatus(s); } }}
-              style={{ flexBasis: "47%", flexGrow: 1, minHeight: 48, justifyContent: "center", paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center",
-                borderColor: status === s ? W.utama : "#cbd5e1", backgroundColor: status === s ? W.utama : W.putih }}>
-              <Text style={{ fontWeight: "700", fontSize: 13, color: status === s ? W.putih : W.teks }}>{s === "DINAS" ? "Dinas" : LABEL_STATUS_GURU[s]}</Text>
+  const diLuar = jarak != null && jarak > madrasah.radiusMeter;
+
+  return <View style={{ flex: 1, backgroundColor: W.latar }}>
+    <Layar segarkan={onSelesai} memuat={memuat}>
+      <Hero style={[g.hero, { paddingBottom: 64 }]}>{kepala}
+        <View style={g.segmen} accessibilityRole="radiogroup" accessibilityLabel="Status kehadiran">
+          {(Object.keys(LABEL_STATUS_GURU) as StatusGuru[]).map(s => (
+            <Pressable key={s} accessibilityRole="radio" accessibilityState={{ checked: status === s }}
+              accessibilityLabel={LABEL_STATUS_GURU[s]} onPress={() => { if (s !== status) { setPercobaan(0); setStatus(s); } }}
+              style={[g.opsi, status === s && g.terpilih]}>
+              <T ringkas tebal ukuran={14} style={{ color: status === s ? W.utama : "#CFE8DD" }}>{s === "DINAS" ? "Dinas" : LABEL_STATUS_GURU[s]}</T>
             </Pressable>
           ))}
         </View>
-      </View>
+      </Hero>
+      <View style={{ marginTop: -54, gap: 12 }}>
+        {lokal?.galat && <Pesan jenis="galat" teks={`Perlu diperbaiki. ${lokal.galat}`} />}
+        {status === "HADIR" ? <>
+          <Kartu style={g.kartu}>
+            {madrasah.lat != null && madrasah.lng != null && <AreaAbsen nama={madrasah.nama} lokasi={lokasi} lat={madrasah.lat} lng={madrasah.lng} jarak={jarak} radius={madrasah.radiusMeter} />}
+            <View style={g.baris}>
+              <View style={{ flex: 1, gap: 3 }}>
+                <T tebal ukuran={16}>{mencari ? "Mencari lokasi…" : jarak != null ? diLuar ? "Di luar area madrasah" : "Di area madrasah" : lokasi ? "Lokasi ditemukan" : "Lokasi GPS"}</T>
+                <T redup ukuran={13}>{jarak != null ? `${jarakTeks(jarak)} dari titik` :
+                  lokasi ? "Titik madrasah belum diatur" : petunjukIzin ?? "Periksa posisi terhadap area madrasah"}</T>
+              </View>
+              {lokasi && lokasi.akurasi > 0 && <Lencana jenis="hijau" teks={`±${lokasi.akurasi} m`} />}
+            </View>
 
-      {status === "HADIR" ? (
-        <>
-          <View style={{ backgroundColor: W.latar, borderRadius: 10, padding: 12, gap: 6 }}>
-            <T tebal>1. Lokasi</T>
-            {lokasi && <T redup>Lokasi didapat (akurasi ±{lokasi.akurasi} m).{jarak != null ? ` Jarak ke madrasah ±${jarakTeks(jarak)}${jarak > madrasah.radiusMeter ? " (di luar area)" : ""}.` : ""}</T>}
-            {galatLokasi && <T style={{ color: W.merah }}>{galatLokasi}</T>}
+            {galatLokasi && <Pesan jenis="galat" teks={galatLokasi} />}
             <Tombol jenis="garis" judul={mencari ? "Mencari lokasi…" : galatLokasi ? "Coba lokasi lagi" : lokasi ? "Perbarui lokasi" : "Ambil lokasi"} onPress={() => setPercobaan(n => n + 1)} memuat={mencari} />
-          </View>
-          <View style={{ backgroundColor: W.latar, borderRadius: 10, padding: 12, gap: 6 }}>
-            <T tebal>2. Foto selfie</T>
-            {foto && <Image alt="Pratinjau selfie" accessibilityLabel="Pratinjau selfie" source={{ uri: foto }} style={{ width: 140, height: 180, borderRadius: 10 }} />}
-            <Tombol jenis="garis" judul={foto ? "Ambil ulang foto" : "Buka kamera"} onPress={ambilFoto} />
-          </View>
-        </>
-      ) : (
-        <Masukan label="Keterangan *" value={keterangan} onChangeText={setKeterangan} multiline
-          placeholder={status === "DINAS" ? "Contoh: rapat KKM di Kemenag Konawe" : "Contoh: demam"} />
-      )}
-
-      {status === "HADIR" ? <View><T>Lokasi: {mencari ? "mencari..." : lokasi ? "siap" : petunjukIzin ?? "belum"}</T><T>Selfie: {foto ? "siap" : "belum"}</T></View> : !keterangan.trim() && <T>Keterangan: belum diisi</T>}
+          </Kartu>
+          <Kartu style={g.baris}>
+            <Pressable accessibilityRole="button" accessibilityLabel={foto ? "Ambil ulang foto selfie" : "Buka kamera depan"}
+              style={g.selfie} onPress={ambilFoto}>
+              {foto ? <Image source={{ uri: foto }} style={{ width: "100%", height: "100%", borderRadius: 44 }} /> : <Ionicons name="camera-outline" color={W.kuning} size={34} />}
+              <View style={g.tambah}><Ionicons name={foto ? "refresh" : "add"} size={18} color="#3D2600" /></View>
+            </Pressable>
+            <View style={{ flex: 1, gap: 4 }}><T tebal ukuran={16}>Foto selfie</T><T redup ukuran={13}>{foto ? "Ketuk untuk mengambil ulang foto." : "Ketuk lingkaran untuk membuka kamera depan."}</T></View>
+          </Kartu>
+        </> : <Kartu style={g.kartu}>
+          <Masukan label="Keterangan *" value={keterangan} onChangeText={setKeterangan} multiline
+            placeholder={status === "DINAS" ? "Contoh: rapat KKM di Kemenag Konawe" : "Contoh: demam"} />
+        </Kartu>}
+        {status === "HADIR" && <View style={g.baris} accessible accessibilityLabel={`${Number(!!lokasi) + Number(!!foto)} dari 2 syarat siap. ${lokasi ? "Lokasi siap" : "Lokasi belum siap"}. ${foto ? "Selfie siap" : "Selfie belum siap"}.`}>
+          {[!!lokasi, !!foto].map((siap, i) => <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: siap ? W.hadir : W.garis }} />)}
+          <T tebal redup ukuran={12}>{Number(!!lokasi) + Number(!!foto)} dari 2</T>
+        </View>}
+      </View>
+    </Layar>
+    <View style={g.kaki}>
       {pesan && <Pesan jenis={pesan.jenis} teks={pesan.teks} />}
-      {pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && (
-        <Tombol judul={proses ? "Mengirim…" : "Kirim absen"} nonaktif={status === "HADIR" ? mencari || !lokasi || !foto : !keterangan.trim()} onPress={kirim} memuat={proses} />
-      )}
-    </Kartu>
-  );
+      {pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && <Tombol judul={proses ? "Mengirim…" : "Kirim absen"}
+        nonaktif={status === "HADIR" ? mencari || !lokasi || !foto : !keterangan.trim()} onPress={kirim} memuat={proses} />}
+      {status === "HADIR" && (!lokasi || !foto) && <T ukuran={12} redup style={g.teksTengah}>{!lokasi && !foto ? "Ambil lokasi dan selfie untuk mengirim absen." : !lokasi ? "Ambil lokasi untuk mengirim absen." : "Tombol aktif setelah selfie diambil."}</T>}
+    </View>
+  </View>;
 }
+
+function AreaAbsen({ nama, lokasi, lat, lng, jarak, radius }: { nama: string; lokasi: Lokasi | null; lat: number; lng: number; jarak: number | null; radius: number }) {
+  // Samakan skala lingkaran dan posisi pengguna, dengan utara di atas.
+  const skala = 52 / Math.max(radius, jarak ?? 0, 1);
+  const arah = lokasi ? Math.atan2((lokasi.lng - lng) * Math.cos(lat * Math.PI / 180), lokasi.lat - lat) : 0;
+  const r = radius * skala;
+  const d = (jarak ?? 0) * skala;
+  return <View style={g.peta} accessible accessibilityLabel={`${nama}. Area absen berjari-jari ${radius} meter`}>
+    <View style={[g.jalan, { left: 0, right: 0, top: "42%", height: 10 }]} />
+    <View style={[g.jalan, { top: 0, bottom: 0, left: "64%", width: 10 }]} />
+    <View style={{ width: 2 * r, height: 2 * r, borderRadius: r, borderStyle: "dashed", borderColor: "#7DAA97", borderWidth: 1.5, backgroundColor: "rgba(15,92,69,0.12)" }} />
+    <View style={{ position: "absolute", transform: [{ translateY: -14 }] }}><Ionicons name="location" size={34} color={W.utama} /></View>
+    {lokasi && <View style={[g.titik, { backgroundColor: W.emas, transform: [{ translateX: d * Math.sin(arah) }, { translateY: -d * Math.cos(arah) }] }]} />}
+    <View style={g.pinLabel}><T numberOfLines={1} tebal ukuran={11}>{nama}</T></View>
+    <Text style={g.radius}>Area absen {radius} m</Text>
+  </View>;
+}
+
+const g = StyleSheet.create({
+  hero: { marginHorizontal: -16, marginTop: -16, padding: 16, gap: 16 },
+  judul: { fontSize: 22, color: W.putih },
+  baris: { flexDirection: "row", alignItems: "center", gap: 10 },
+  rincian: { backgroundColor: W.latar, width: "100%", borderRadius: 18, padding: 16, gap: 12 },
+  sukses: { flexGrow: 1, paddingHorizontal: 24, alignItems: "center", justifyContent: "center", gap: 14, paddingVertical: 28 },
+  teksTengah: { textAlign: "center" },
+  segmen: { backgroundColor: "#0B4A37", padding: 4, borderRadius: 14, flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  opsi: { flexGrow: 1, flexBasis: 58, minWidth: 48, minHeight: 48, padding: 4, borderRadius: 14, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
+  terpilih: { backgroundColor: W.putih },
+  kartu: { gap: 10 },
+  peta: { height: 144, overflow: "hidden", backgroundColor: W.utamaLatar, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  jalan: { position: "absolute", backgroundColor: "#F5FAF7" },
+  titik: { position: "absolute", height: 16, width: 16, borderRadius: 8, borderWidth: 3, borderColor: W.putih },
+  radius: { position: "absolute", left: 10, bottom: 8, color: W.utamaTua, fontSize: 12, fontWeight: "700" },
+  pinLabel: { position: "absolute", top: 8, left: 8, maxWidth: "90%", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: W.putih },
+  selfie: { width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF4D6" },
+  tambah: { position: "absolute", bottom: 2, right: 1, width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: W.putih, backgroundColor: W.emas },
+  kaki: { backgroundColor: W.latar, paddingVertical: 10, paddingHorizontal: 16, gap: 6 },
+});

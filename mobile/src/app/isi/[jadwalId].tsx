@@ -1,6 +1,8 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { Avatar, Hero, Ring } from "@/components/v2";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Pressable, Text, View } from "react-native";
+import { AppState, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GalatJaringan, GalatServer, minta } from "@/lib/api";
 import { idBaru, isiAntrean, useAntrean, kirimAtauAntre, type ItemAntrean } from "@/lib/antrean";
 import { cacheHariIni } from "@/lib/hari-ini";
@@ -10,14 +12,14 @@ import { bacaJson, hapus, simpanJson } from "@/lib/penyimpanan";
 import { useSaya } from "@/lib/sesi";
 import { LABEL_STATUS_SISWA, type ItemJadwal, type ResponsHariIni, type StatusSiswa } from "@/lib/tipe";
 import { tanggalDiZona } from "@/lib/waktu";
-import { Daftar, Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
+import { huruf, Daftar, Judul, Kartu, Layar, Masukan, Memuat, Pesan, T, Tombol, W, type JenisPesan } from "@/components/ui";
 
 const URUTAN: StatusSiswa[] = ["H", "S", "I", "A"];
 function akhiriKalimat(teks: string) {
   const kalimat = teks.trimEnd();
   return /[.!?]$/.test(kalimat) ? kalimat : kalimat + ".";
 }
-const WARNA: Record<StatusSiswa, string> = { H: W.utama, S: W.biru, I: W.kuning, A: W.merah };
+const WARNA: Record<StatusSiswa, string> = { H: W.hadir, S: W.biru, I: W.kuning, A: W.merah };
 
 export default function IsiPertemuan() {
   const { jadwalId, antreanId } = useLocalSearchParams<{ jadwalId: string; antreanId?: string }>();
@@ -25,7 +27,7 @@ export default function IsiPertemuan() {
   const hari = tanggalDiZona(zona);
   const prefix = `draf_v1/${encodeURIComponent(pengguna.id)}/`;
   const kunci = `${prefix}${hari}/${jadwalId}`;
-  const [muatan, setMuatan] = useState<{ kunci: string; item?: ItemJadwal; tanggal: string; offline: boolean; galat?: string; draf?: Draf | null; lokal?: ItemAntrean }>();
+  const [muatan, setMuatan] = useState<{ kunci: string; item?: ItemJadwal; materiLalu?: string; tanggal: string; offline: boolean; galat?: string; draf?: Draf | null; lokal?: ItemAntrean }>();
   useEffect(() => {
     let aktif = true;
     async function buka() {
@@ -47,7 +49,12 @@ export default function IsiPertemuan() {
           galat = e instanceof Error ? e.message : "Gagal memuat jadwal.";
         }
       }
-      if (aktif) setMuatan({ kunci, item: lokal?.jadwal ?? r?.data.jadwal.find(j => j.id === jadwalId), tanggal: lokal?.jadwal ? hari : r?.data.tanggal ?? "", offline, galat, draf, lokal });
+      const item = lokal?.jadwal ?? r?.data.jadwal.find(j => j.id === jadwalId);
+      const tanggal = lokal?.jadwal ? hari : r?.data.tanggal ?? "";
+      const materiLalu = item && r?.data.tanggal === tanggal ? r.data.jadwal
+        .filter(j => j.kelas.id === item.kelas.id && j.mapel.id === item.mapel.id && j.jamSelesai < item.jamMulai && j.pertemuan?.materi.trim())
+        .sort((a, b) => b.jamSelesai - a.jamSelesai)[0]?.pertemuan?.materi : undefined;
+      if (aktif) setMuatan({ kunci, item, tanggal, materiLalu, offline, galat, draf, lokal });
     }
     buka().catch(() => { if (aktif) setMuatan({ kunci, tanggal: "", offline: false, galat: "Penyimpanan HP tidak dapat dibaca." }); });
     return () => { aktif = false; };
@@ -62,12 +69,12 @@ export default function IsiPertemuan() {
       </Layar>
     );
   }
-  return <Form key={kunci} kunci={kunci} lokal={muatan.lokal} draf={muatan.tanggal === hari ? muatan.draf : null} item={muatan.item} tanggal={muatan.tanggal} offline={muatan.offline} />;
+  return <Form key={kunci} kunci={kunci} lokal={muatan.lokal} draf={muatan.tanggal === hari ? muatan.draf : null} item={muatan.item} materiLalu={muatan.materiLalu} tanggal={muatan.tanggal} offline={muatan.offline} />;
 }
 
 type Draf = { materi: string; kd: string; catatan: string; isian: Record<string, { status: StatusSiswa; keterangan: string }> };
 
-function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; lokal?: ItemAntrean; draf?: Draf | null; item: ItemJadwal; tanggal: string; offline: boolean }) {
+function Form({ item, materiLalu, tanggal, offline, kunci, lokal, draf }: { kunci: string; lokal?: ItemAntrean; draf?: Draf | null; item: ItemJadwal; materiLalu?: string; tanggal: string; offline: boolean }) {
   const { pengguna, zona } = useSaya();
   const p = item.pertemuan;
   const hariIni = tanggalDiZona(zona);
@@ -93,6 +100,7 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
   const [pesan, setPesan] = useState<{ jenis: JenisPesan; teks: string } | null>(null);
 
   const nilai = useMemo(() => ({ materi, kd, catatan, isian }), [materi, kd, catatan, isian]);
+  const [tersimpan, setTersimpan] = useState<Draf | null>(draf ? nilai : null);
   const awal = useRef(nilai);
   const tertunda = useRef<Draf | null>(null);
   const selesai = useRef(false);
@@ -102,7 +110,7 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
     const d = tertunda.current;
     if (!d || selesai.current) return;
     tertunda.current = null;
-    tulis.current = tulis.current.then(() => simpanJson(kunci, d)).catch(() => setPesan({ jenis: "galat", teks: "Draf gagal disimpan di HP." }));
+    tulis.current = tulis.current.then(async () => { await simpanJson(kunci, d); setTersimpan(d); }).catch(() => setPesan({ jenis: "galat", teks: "Draf gagal disimpan di HP." }));
   }, [kunci]);
   useEffect(() => {
     if (!bolehIsi || selesai.current || nilai === awal.current) return;
@@ -156,54 +164,75 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
     finally { sibuk.current = false; setProses(false); }
   }
 
-  const [dibuka, setDibuka] = useState(false);
+  const { bottom } = useSafeAreaInsets();
+  const adaIsiDraf = Boolean(materi.trim() || kd.trim() || catatan.trim() || rekap.H < item.siswa.length);
+  const [tampilkanPetunjuk, setTampilkanPetunjuk] = useState(true);
+  const [detail, setDetail] = useState(Boolean(kd || catatan));
   const [sebelum, setSebelum] = useState<typeof isian | null>(null);
-  const adaAbsen = rekap.H < item.siswa.length;
-  const terbuka = dibuka || adaAbsen;
-  const barisSiswa = ({ item: s, index: i }: { item: ItemJadwal["siswa"][number]; index: number }) => (
-          <View key={s.id} style={{ borderTopWidth: i ? 1 : 0, borderColor: W.garis, paddingVertical: 8, gap: 6 }}>
-            <>
-              <T ukuran={14}><Text style={{ color: W.redup }}>{i + 1}. </Text>{s.nama}</T>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }} accessibilityRole="radiogroup">
-                {URUTAN.map((st) => {
-                  const pilih = isian[s.id].status === st;
-                  return (
-                    <Pressable key={st} disabled={!bolehIsi || proses || selesai.current} accessibilityRole="radio" accessibilityState={{ checked: pilih }}
-                      accessibilityLabel={`${s.nama} ${LABEL_STATUS_SISWA[st]}`}
-                      onPress={() => setIsian((x) => ({ ...x, [s.id]: { status: st, keterangan: st === "H" ? "" : x[s.id].keterangan } }))}
-                      style={{ minWidth: 48, minHeight: 48, borderRadius: 9, borderWidth: 1, alignItems: "center", justifyContent: "center",
-                        borderColor: pilih ? WARNA[st] : W.garis, backgroundColor: pilih ? WARNA[st] : W.putih }}>
-                      <Text style={{ fontWeight: pilih ? "900" : "400", color: pilih ? W.putih : W.redup }}>{st}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
-            {isian[s.id].status !== "H" && (
-              <Masukan label={`Keterangan ${s.nama}`} placeholder="Keterangan (opsional)" editable={bolehIsi && !proses && !selesai.current} value={isian[s.id].keterangan}
-                onChangeText={(v) => setIsian((x) => ({ ...x, [s.id]: { ...x[s.id], keterangan: v } }))} />
-            )}
-          </View>
-        );
-  const tombolSimpan = bolehIsi && pesan?.jenis !== "antre" && pesan?.jenis !== "ok" && (
-        <Tombol judul={proses ? "Menyimpan…" : p ? "Simpan perubahan" : "Simpan absen & jurnal"} onPress={() => void simpan()} memuat={proses} nonaktif={item.siswa.length === 0} />
-      );
+  const [siswaCatatan, setSiswaCatatan] = useState<ItemJadwal["siswa"][number] | null>(null);
+  const editable = bolehIsi && !proses && !selesai.current;
+  const { fontScale, width } = useWindowDimensions();
+  const kolom = width / fontScale < 270 ? 2 : 3;
+  const [tidakHadir, setTidakHadir] = useState(false);
+  const daftarSiswa = tidakHadir ? item.siswa.filter(s => isian[s.id].status !== "H") : item.siswa;
+  const ringkas = URUTAN.slice(1).filter(st => rekap[st] > 0)
+    .map(st => `${rekap[st]} ${LABEL_STATUS_SISWA[st].toLowerCase()}`).join(" · ");
 
-  return (
-    <Daftar data={terbuka ? item.siswa : []} renderItem={barisSiswa} ListFooterComponent={terbuka && tombolSimpan || undefined}>
-      <View>
-        <Judul>{item.mapel.nama}</Judul>
-        <T redup>Kelas {item.kelas.nama} · Jam ke-{item.jamMulai}{item.jamSelesai > item.jamMulai ? `–${item.jamSelesai}` : ""} · {item.waktu}</T>
-      </View>
+  function gantiStatus(id: string) {
+    setTampilkanPetunjuk(false);
+    setSebelum(null);
+    setIsian(lama => {
+      const siswa = lama[id];
+      const status = URUTAN[(URUTAN.indexOf(siswa.status) + 1) % URUTAN.length];
+      return { ...lama, [id]: { status, keterangan: status === "H" ? "" : siswa.keterangan } };
+    });
+  }
+
+  function kartuSiswa({ item: siswa }: { item: ItemJadwal["siswa"][number] }) {
+    const { status, keterangan } = isian[siswa.id];
+    const warna = WARNA[status];
+    const label = LABEL_STATUS_SISWA[status];
+    const hadir = status === "H";
+    return <View style={[gaya.kolom, { width: kolom === 3 ? "33.3333%" : "50%" }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={[siswa.nama, label, keterangan].filter(Boolean).join(", ")}
+        accessibilityHint={editable ? "Ketuk untuk mengganti status. Tekan lama untuk keterangan." : "Ketuk untuk melihat keterangan."}
+        onPress={() => editable ? gantiStatus(siswa.id) : setSiswaCatatan(siswa)} onLongPress={() => setSiswaCatatan(siswa)}
+        accessibilityActions={[{ name: "keterangan", label: "Buka keterangan siswa" }]}
+        onAccessibilityAction={({ nativeEvent }) => { if (nativeEvent.actionName === "keterangan") setSiswaCatatan(siswa); }}
+        style={({ pressed }) => [gaya.siswa, { borderWidth: hadir ? 0 : 2, borderColor: warna, backgroundColor: LATAR[status], opacity: pressed ? 0.8 : 1 }]}>
+        <Avatar nama={siswa.nama} status={status} size={34} />
+        <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[gaya.nama, huruf(600)]}>{siswa.nama}</Text>
+        {(!hadir || !!keterangan) && <Text style={[gaya.keterangan, huruf(600), { color: warna }]}>{[label, keterangan].filter(Boolean).join(" · ")}</Text>}
+      </Pressable>
+    </View>;
+  }
+
+  return <View style={{ flex: 1, backgroundColor: W.latar }}>
+    <Stack.Screen options={{ title: `${item.mapel.nama} · ${item.kelas.nama}`, headerBackTitle: "Kembali" }} />
+    <Daftar key={kolom} data={daftarSiswa} numColumns={kolom} renderItem={kartuSiswa}
+      columnWrapperStyle={{ marginHorizontal: -4 }} ListEmptyComponent={<T redup>{tidakHadir ? "Semua siswa hadir." : "Belum ada siswa di kelas ini."}</T>}>
+      <Hero style={gaya.hero}>
+        <View style={[gaya.baris, { flexWrap: "wrap" }]}>
+          <T style={{ color: "#CFE8DD" }}>Jam {item.jamMulai}{item.jamSelesai > item.jamMulai ? `–${item.jamSelesai}` : ""} · {item.waktu}</T>
+          {editable && adaIsiDraf && (tersimpan || nilai !== awal.current) && <View style={gaya.draf}><T tebal ukuran={12} style={{ color: W.utama }}>{tersimpan === nilai ? "Draf tersimpan" : "Draf berubah"}</T></View>}
+        </View>
+        <View style={[gaya.baris, { flexWrap: "wrap" }]}>
+          <View accessible accessibilityLabel={`${rekap.H} hadir dari ${item.siswa.length} siswa`}>
+            <Ring value={item.siswa.length ? 100 * rekap.H / item.siswa.length : 0} size={Math.max(76, 60 * Math.min(fontScale, 2))}>
+              <T tebal ukuran={20} style={{ color: W.putih }}>{rekap.H}</T>
+              <T ukuran={11} style={{ color: "#CFE8DD" }}>dari {item.siswa.length}</T>
+            </Ring>
+          </View>
+          <View style={gaya.pilRekap}>{URUTAN.slice(1).map(st => <View key={st} style={[gaya.hitung, { backgroundColor: LATAR[st] }]}>
+            <T tebal ukuran={12} style={{ color: WARNA[st] }}>{rekap[st]} {LABEL_STATUS_SISWA[st]}</T>
+          </View>)}</View>
+        </View>
+      </Hero>
       {lokal && !pesan && <Pesan jenis={aktif?.galat ? "galat" : aktif ? "antre" : "ok"} teks={aktif?.galat ? `Perlu diperbaiki. ${aktif.galat}` : aktif ? "Tersimpan di HP, menunggu dikirim." : "Antrean sudah berubah. Buka kembali jadwal."} />}
       {offline && <Pesan jenis="antre" teks="Sedang offline. Isian akan disimpan di HP lalu dikirim otomatis." />}
       {pengganti && <Pesan jenis="info" teks={akhiriKalimat(`Jadwal ${item.guru.nama}`) + (bolehIsi ? " Anda mengisi sebagai guru pengganti." : "")} />}
       {p && <Pesan jenis="ok" teks={akhiriKalimat(`Sudah diisi oleh ${p.namaGuru}${p.pengganti ? " (pengganti)" : ""}`) + (bolehIsi ? " Anda masih bisa mengubahnya hari ini." : "")} />}
 
-      <Kartu>
-        <Judul kecil>Kehadiran siswa</Judul>
-        <T>{rekap.H} hadir · {rekap.S} sakit · {rekap.I} izin · {rekap.A} alpa</T>
-      </Kartu>
       {!bolehIsi && <Pesan jenis="info" teks={
         p?.diperiksa ? "Jurnal sudah diperiksa kepala madrasah, jadi tidak bisa diubah lagi."
         : tanggal < hariIni ? "Jadwal ini sudah lewat harinya, jadi tidak bisa diisi atau diubah lagi."
@@ -211,31 +240,84 @@ function Form({ item, tanggal, offline, kunci, lokal, draf }: { kunci: string; l
         : pengguna.peran === "ADMIN" ? "Admin hanya bisa melihat jurnal ini."
         : "Jurnal ini sudah diisi oleh guru lain. Hanya guru yang mengisinya yang bisa mengubahnya."
       } />}
-      <Kartu style={{ gap: 12 }}>
-        <Judul kecil>Jurnal mengajar</Judul>
-        <Masukan label="Materi yang diajarkan *" value={materi} onChangeText={setMateri} editable={bolehIsi && !proses && !selesai.current} multiline />
-        <Masukan label="KD / tujuan pembelajaran" value={kd} onChangeText={setKd} editable={bolehIsi && !proses && !selesai.current} />
-        <Masukan label="Catatan kejadian (opsional)" value={catatan} onChangeText={setCatatan} editable={bolehIsi && !proses && !selesai.current} multiline />
+      <Kartu>
+        <Masukan label="Materi hari ini (wajib)" placeholder="Materi yang diajarkan" editable={editable} value={materi} onChangeText={setMateri} multiline />
+        {editable && !!materiLalu && !materi.trim() && <Pressable accessibilityRole="button" accessibilityLabel={`Gunakan materi sebelumnya, ${materiLalu}`} style={gaya.detail} onPress={() => setMateri(materiLalu)}>
+          <T tebal ukuran={13} style={{ color: W.utama }}>Lalu · {materiLalu}</T>
+        </Pressable>}
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: detail }} onPress={() => setDetail(!detail)} style={gaya.detail}>
+          <T tebal ukuran={13} style={{ color: W.utama }}>{detail ? "Sembunyikan KD & catatan" : "Tambah KD & catatan"}</T>
+        </Pressable>
+        {detail && <>
+          <Masukan label="KD / tujuan pembelajaran" editable={editable} value={kd} onChangeText={setKd} />
+          <Masukan label="Catatan kejadian (opsional)" editable={editable} value={catatan} onChangeText={setCatatan} multiline />
+        </>}
       </Kartu>
-
+      <View style={[gaya.baris, { justifyContent: "flex-start", flexWrap: "wrap" }]}>
+        {[false, true].map(filter => <Pressable key={String(filter)} accessibilityRole="button" accessibilityState={{ selected: filter === tidakHadir }}
+          style={[gaya.filter, filter === tidakHadir && { backgroundColor: W.teks }]} onPress={() => setTidakHadir(filter)}>
+          <T tebal ukuran={13} style={{ color: filter === tidakHadir ? W.putih : W.teks }}>{filter ? `Tidak hadir ${item.siswa.length - rekap.H}` : `Semua ${item.siswa.length}`}</T>
+        </Pressable>)}
+      </View>
+      <View style={[gaya.baris, { flexWrap: "wrap" }]}>
+        <Judul kecil>Siswa</Judul>
+        {editable && rekap.H < item.siswa.length && <Tombol jenis="teks" judul="Semua hadir" onPress={() => {
+          setSebelum(isian);
+          setIsian(Object.fromEntries(item.siswa.map(s => [s.id, { status: "H", keterangan: "" }])));
+        }} />}
+        {editable && sebelum && <Tombol jenis="teks" judul="Urungkan" onPress={() => { setIsian(sebelum); setSebelum(null); }} />}
+      </View>
+      {editable && tampilkanPetunjuk && item.siswa.length > 0 && <T redup ukuran={12}>Ketuk untuk ubah status</T>}
+    </Daftar>
+    <View style={[gaya.footer, { marginBottom: Math.max(12, bottom) }]}>
       {pesan && (pesan.jenis === "antre"
         ? <Pesan jenis={aktif?.galat ? "galat" : aktif ? "antre" : "ok"} teks={aktif?.galat ? `Perlu diperbaiki. ${aktif.galat}` : aktif ? pesan.teks : "Terkirim."} />
         : <Pesan jenis={pesan.jenis} teks={pesan.teks} />)}
-      {tombolSimpan}
-      {pesan?.jenis === "antre" && <Tombol jenis="garis" judul="Kembali ke jadwal" onPress={() => router.back()} />}
-      {item.siswa.length === 0 ? <T redup>Belum ada siswa di kelas ini.</T> : <Kartu>
-        {adaAbsen ? <Judul kecil>Kehadiran per siswa</Judul> :
-          <Tombol jenis="garis" judul={terbuka ? "Tutup daftar siswa" : `${bolehIsi ? "Ubah" : "Lihat"} kehadiran siswa (${item.siswa.length})`} onPress={() => { setDibuka(!dibuka); setSebelum(null); }} />}
-        {bolehIsi && !proses && !selesai.current && adaAbsen && <Tombol jenis="garis" judul="Semua hadir" onPress={() => {
-          setSebelum(isian);
-          setDibuka(false);
-          setIsian(Object.fromEntries(item.siswa.map(s => [s.id, { status: "H", keterangan: "" }])));
-        }} />}
-        {sebelum && !proses && !selesai.current && <><T>Semua siswa ditandai hadir.</T><Tombol jenis="teks" judul="Urungkan" onPress={() => {
-          setIsian(sebelum);
-          setSebelum(null);
-        }} /></>}
-      </Kartu>}
-    </Daftar>
-  );
+      <View style={gaya.baris}>
+        <View style={{ flex: 1 }}>
+          <T tebal style={{ color: W.putih }}>{rekap.H} hadir dari {item.siswa.length}</T>
+          {!!ringkas && <T style={{ color: "#CFE8DD" }} ukuran={12}>{ringkas}</T>}
+        </View>
+        {bolehIsi && !selesai.current && <Pressable accessibilityRole="button" accessibilityState={{ disabled: proses || !item.siswa.length, busy: proses }}
+          disabled={proses || !item.siswa.length} onPress={() => void simpan()} style={[gaya.simpan, (proses || !item.siswa.length) && { opacity: 0.65 }]}>
+          <T tebal style={{ color: "#3D2600" }}>{proses ? "Menyimpan…" : "Simpan"}</T>
+        </Pressable>}
+        {pesan?.jenis === "antre" && <Tombol jenis="garis" judul="Kembali ke jadwal" onPress={() => router.back()} />}
+      </View>
+    </View>
+    <Modal visible={!!siswaCatatan} transparent animationType="fade" onRequestClose={() => setSiswaCatatan(null)}>
+      <KeyboardAvoidingView style={gaya.lapisan} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        {siswaCatatan && <ScrollView style={gaya.dialog} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 12 }}>
+          <Judul kecil>{siswaCatatan.nama}</Judul>
+          <T redup>{LABEL_STATUS_SISWA[isian[siswaCatatan.id].status]}</T>
+          <Masukan label="Keterangan siswa (opsional)" multiline editable={editable} value={isian[siswaCatatan.id].keterangan}
+            onChangeText={keterangan => {
+              const id = siswaCatatan.id;
+              setSebelum(null);
+              setIsian(lama => ({ ...lama, [id]: { ...lama[id], keterangan } }));
+            }} />
+          <Tombol judul="Selesai" onPress={() => setSiswaCatatan(null)} />
+        </ScrollView>}
+      </KeyboardAvoidingView>
+    </Modal>
+  </View>;
 }
+
+const LATAR: Record<StatusSiswa, string> = { H: W.putih, S: W.biruMuda, I: W.izinMuda, A: W.merahMuda };
+const gaya = StyleSheet.create({
+  baris: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  hero: { marginTop: -16, marginHorizontal: -16, padding: 16, paddingBottom: 20, gap: 12 },
+  draf: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 8, backgroundColor: "#CDEBDD" },
+  pilRekap: { flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 5 },
+  hitung: { padding: 7, borderRadius: 9 },
+  filter: { minHeight: 48, borderRadius: 24, paddingHorizontal: 14, backgroundColor: W.putih, justifyContent: "center" },
+  detail: { justifyContent: "center", minHeight: 48 },
+  kolom: { width: "33.3333%", paddingHorizontal: 4 },
+  siswa: { flex: 1, minHeight: 86, borderRadius: 16, borderWidth: 1, justifyContent: "center", alignItems: "center", gap: 4, padding: 6 },
+  nama: { fontSize: 13, color: W.teks, textAlign: "center" },
+  keterangan: { fontSize: 12, textAlign: "center" },
+  footer: { backgroundColor: W.teks, marginHorizontal: 12, marginTop: 4, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
+  simpan: { minWidth: 82, minHeight: 48, paddingHorizontal: 16, borderRadius: 14, backgroundColor: W.emas, justifyContent: "center", alignItems: "center" },
+  lapisan: { flex: 1, justifyContent: "center", backgroundColor: "rgba(16,32,27,0.45)", padding: 16 },
+  dialog: { flexGrow: 0, maxHeight: "90%", borderRadius: 14, backgroundColor: W.putih },
+});
