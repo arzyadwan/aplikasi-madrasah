@@ -262,8 +262,11 @@ function AreaAbsen({ nama, lokasi, lat, lng, jarak, radius }: { nama: string; lo
     <View style={{ width: 2 * r, height: 2 * r, borderRadius: r, borderStyle: "dashed", borderColor: "#7DAA97", borderWidth: 1.5, backgroundColor: "rgba(15,92,69,0.12)" }} />
     <View style={{ position: "absolute", transform: [{ translateY: -14 }] }}><Ionicons name="location" size={34} color={W.utama} /></View>
     {lokasi && <View style={[g.titik, { backgroundColor: W.emas, transform: [{ translateX: d * Math.sin(arah) }, { translateY: -d * Math.cos(arah) }] }]} />}
-    <View style={g.pinLabel}><T numberOfLines={1} tebal ukuran={11}>{nama}</T></View>
-    <Text style={g.radius}>Area absen {radius} m</Text>
+    <View style={g.pinLabel}>
+      <T numberOfLines={1} tebal ukuran={11}>{nama}</T>
+      <T numberOfLines={1} ukuran={11} style={{ color: W.utamaTua }}>Area absen {radius} m</T>
+    </View>
+    {lokasi && <View style={g.legenda}><View style={[g.titikKecil, { backgroundColor: W.emas }]} /><T tebal ukuran={11}>Posisi Anda</T></View>}
   </View>;
 }
 
@@ -281,8 +284,9 @@ const g = StyleSheet.create({
   peta: { height: 144, overflow: "hidden", backgroundColor: W.utamaLatar, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   jalan: { position: "absolute", backgroundColor: "#F5FAF7" },
   titik: { position: "absolute", height: 16, width: 16, borderRadius: 8, borderWidth: 3, borderColor: W.putih },
-  radius: { position: "absolute", left: 10, bottom: 8, color: W.utamaTua, fontSize: 12, fontWeight: "700" },
-  pinLabel: { position: "absolute", top: 8, left: 8, maxWidth: "90%", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: W.putih },
+  pinLabel: { position: "absolute", bottom: 8, left: 8, maxWidth: "60%", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: W.putih },
+  legenda: { position: "absolute", top: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: W.putih },
+  titikKecil: { width: 10, height: 10, borderRadius: 5 },
   selfie: { width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF4D6" },
   tambah: { position: "absolute", bottom: 2, right: 1, width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: W.putih, backgroundColor: W.emas },
   kaki: { backgroundColor: W.latar, paddingVertical: 10, paddingHorizontal: 16, gap: 6 },
