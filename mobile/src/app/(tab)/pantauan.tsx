@@ -42,7 +42,8 @@ function GrafikKelas({ kelas }: { kelas: ResponsPantauan["perKelas"] }) {
   return <Kartu>
     <Judul kecil>Kehadiran per kelas</Judul>
     {kelas.length === 0 && <T redup>Belum ada data kelas.</T>}
-    <ScrollView horizontal contentContainerStyle={{ flexGrow: 1, gap: 6, alignItems: "flex-end" }}>
+    {kelas.length > 5 && <T redup ukuran={12}>Geser untuk melihat {kelas.length} kelas · ketuk batang untuk rincian</T>}
+    <ScrollView horizontal showsHorizontalScrollIndicator={kelas.length > 5} contentContainerStyle={{ flexGrow: 1, gap: 6, alignItems: "flex-end", paddingBottom: kelas.length > 5 ? 6 : 0 }}>
       {kelas.map(k => {
         const { H, S, I, A } = k.rekap;
         const total = H + S + I + A;
@@ -50,7 +51,7 @@ function GrafikKelas({ kelas }: { kelas: ResponsPantauan["perKelas"] }) {
         return <Pressable key={k.id} accessibilityRole="button" accessibilityState={{ expanded: pilihan === k.id }}
           accessibilityLabel={k.nama + ", " + (nilai == null ? "belum ada data" : nilai + "% hadir")}
           onPress={() => pilih(pilihan === k.id ? "" : k.id)}
-          style={{ alignItems: "center", minHeight: 48, minWidth: 48 * fontScale, flex: 1, gap: 4 }}>
+          style={{ alignItems: "center", minHeight: 48, width: 56 * fontScale, gap: 4 }}>
           <T tebal ukuran={12}>{nilai == null ? "—" : nilai + "%"}</T>
           <View style={{ alignSelf: "stretch", height: nilai == null ? 1 : Math.max(2, nilai * .68), borderRadius: 7, backgroundColor: nilai == null ? W.garis : nilai < 90 ? W.emas : W.utama }} />
           <T ringkas redup ukuran={12}>{k.nama}</T>
