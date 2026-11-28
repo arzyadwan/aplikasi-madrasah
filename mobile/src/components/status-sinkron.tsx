@@ -7,7 +7,7 @@ import { hapusDariAntrean, isiAntrean, sinkronkan, useAntrean, useTerkirim } fro
 
 import { router } from "expo-router";
 import { Judul, Kartu, T, Tombol, W } from "./ui";
-import { useSaya } from "@/lib/sesi";
+import { useSesi } from "@/lib/sesi";
 import { tanggalDiZona } from "@/lib/waktu";
 
 /** Penanda di header: offline / jumlah isian yang menunggu dikirim. Kirim otomatis saat online. */
@@ -15,7 +15,7 @@ export function StatusSinkron() {
   const insets = useSafeAreaInsets();
   const antrean = useAntrean();
   const terakhir = useTerkirim();
-  const { zona } = useSaya();
+  const zona = useSesi().saya?.zona;
   const [rincian, setRincian] = useState("");
   const [buka, setBuka] = useState(false);
   const [online, setOnline] = useState(true);
@@ -53,7 +53,7 @@ export function StatusSinkron() {
           <T tebal>{x.label}</T>
           <T>{x.galat ? `Perlu diperbaiki. ${x.galat}` : `Tersimpan di HP, menunggu dikirim. ${x.alasanTunda ?? ""}`}</T>
           {x.galat && <>
-            {x.body.tanggal === tanggalDiZona(zona) ? <Tombol judul="Perbaiki isian" onPress={() => {
+            {zona && x.body.tanggal === tanggalDiZona(zona) ? <Tombol judul="Perbaiki isian" onPress={() => {
               setBuka(false);
               if (x.path === "/api/absen-guru") router.navigate({ pathname: "/absen", params: { antreanId: x.id } });
               else router.push({ pathname: "/isi/[jadwalId]", params: { jadwalId: String(x.body.jadwalId), antreanId: x.id } });

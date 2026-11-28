@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Avatar, Hero } from "@/components/v2";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
@@ -61,7 +62,7 @@ export default function Jurnal() {
         <Pressable accessibilityRole="button" accessibilityLabel={"Pilih tanggal, " + formatTanggal(tanggal)}
           accessibilityState={{ expanded: pilihTanggal }} onPress={() => setPilihTanggal(!pilihTanggal)}
           style={{ minHeight: 48, alignSelf: "flex-start", flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <T tebal ukuran={16} style={{ color: W.putih }}>{formatTanggal(tanggal)}</T><T style={{ color: W.putih }}>⌄</T>
+          <T tebal ukuran={16} style={{ color: W.putih }}>{formatTanggal(tanggal)}</T><Ionicons name="chevron-down" size={18} color={W.putih} />
         </Pressable>
         {data && <><T style={{ color: W.putih }}>{diperiksa.length} dari {data.jurnal.length} diperiksa</T>
           <View style={{ height: 8, borderRadius: 8, backgroundColor: "#1B7258" }}>
@@ -109,17 +110,17 @@ function KartuJurnal({ j, kepala, setelahUbah, isian, ubah }: {
     <Kartu>
       <Baris style={{ alignItems: "flex-start" }}>
         <Avatar nama={j.guru} size={36} />
-        <View style={{ flex: 1 }}>
-          <T redup ukuran={12}>Jam ke-{j.jamMulai}–{j.jamSelesai} · Kelas {j.kelas}</T>
-          <T tebal>{j.guru} · {j.mapel}</T>
-          {j.menggantikan && <T redup>Menggantikan {j.menggantikan}</T>}
+        <View style={{ flex: 1, gap: 2 }}>
+          <T tebal numberOfLines={2}>{j.guru} · {j.mapel}</T>
+          <T redup ukuran={12}>Kelas {j.kelas} · Jam {j.jamMulai}–{j.jamSelesai}</T>
+          {j.menggantikan && <T redup ukuran={12} style={{ color: W.kuning }}>Pengganti untuk {j.menggantikan}</T>}
         </View>
-        <Lencana teks={j.diperiksa ? "Diperiksa" : "Belum diperiksa"} jenis={j.diperiksa ? "hijau" : "kuning"} />
       </Baris>
       <T><T redup>Materi: </T>{j.materi}</T>
       {j.kd && <T><T redup>KD/tujuan: </T>{j.kd}</T>}
       {j.catatan && <T><T redup>Catatan: </T>{j.catatan}</T>}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        <Lencana teks={j.diperiksa ? "Diperiksa" : "Belum diperiksa"} jenis={j.diperiksa ? "hijau" : "kuning"} />
         <Lencana teks={j.rekap.H + " hadir"} jenis="hijau" />
         {j.rekap.S > 0 && <Lencana teks={j.rekap.S + " sakit"} jenis="biru" />}
         {j.rekap.I > 0 && <Lencana teks={j.rekap.I + " izin"} jenis="kuning" />}

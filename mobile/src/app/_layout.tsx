@@ -30,14 +30,14 @@ function Navigasi() {
   return (
     <><StatusBar style="light" />
     <Stack screenOptions={{
-      headerStyle: { backgroundColor: W.utamaTua }, headerTintColor: W.putih, headerTitleStyle: { ...huruf(700), fontSize: 20 },
+      headerStyle: { backgroundColor: W.utamaTua }, headerTintColor: W.putih, headerTitleStyle: { ...huruf(700), fontSize: 20 }, headerShadowVisible: false,
       headerRight: () => <StatusSinkron />,
     }}>
       <Stack.Protected guard={login}>
         <Stack.Screen name="(tab)" options={{ headerShown: false }} />
         <Stack.Screen name="isi/[jadwalId]" options={{ title: "Absen & Jurnal" }} />
         <Stack.Screen name="pengganti" options={{ title: "Guru Pengganti" }} />
-        <Stack.Screen name="jurnal" options={{ title: "Jurnal Mengajar" }} />
+        <Stack.Screen name="jurnal" options={{ title: "Periksa Jurnal" }} />
         <Stack.Screen name="kehadiran-guru" options={{ title: "Kehadiran Guru" }} />
       </Stack.Protected>
       <Stack.Protected guard={!login}>

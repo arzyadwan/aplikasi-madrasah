@@ -1,3 +1,4 @@
+import { inisialNama } from "@/lib/nama";
 import type { PropsWithChildren } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -21,7 +22,7 @@ const absen: Record<string, [string, string, string]> = {
 export function Avatar({ nama, status, size = 40 }: { nama: string; status?: string; size?: number }) {
   let hash = 0;
   for (const huruf of nama) hash = (hash * 31 + huruf.charCodeAt(0)) >>> 0;
-  const inisial = nama.split(",")[0].trim().split(/\s+/).slice(0, 2).map(kata => kata[0]).join("").toUpperCase();
+  const inisial = inisialNama(nama);
   const [backgroundColor, color, label] = absen[status?.toUpperCase().charAt(0) ?? ""] ?? [...palet[hash % palet.length], inisial];
   return <View importantForAccessibility="no-hide-descendants" style={{ width: size, height: size, borderRadius: size / 2,
     backgroundColor, alignItems: "center", justifyContent: "center" }}>

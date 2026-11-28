@@ -3,17 +3,21 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
-import { Baris, Judul, Kartu, Layar, Lencana, Memuat, NavTanggal, Pesan, T, Tombol, W } from "@/components/ui";
+import { Judul, Kartu, Layar, Memuat, NavTanggal, Pesan, T, Tombol, W } from "@/components/ui";
 import { useMuat } from "@/lib/muat";
 import { useSaya } from "@/lib/sesi";
 import type { ResponsPantauan } from "@/lib/tipe";
 import { formatTanggal, tanggalDiZona } from "@/lib/waktu";
 
-function Angka({ label, nilai, ikon }: { label: string; nilai: string; ikon: "people" | "book" }) {
+function Angka({ label, nilai, total, ikon }: { label: string; nilai: number; total: number; ikon: "people-outline" | "document-text-outline" }) {
   const { fontScale } = useWindowDimensions();
-  return <View style={[s.metrik, { minWidth: 80 * fontScale }]}>
-    <Ionicons name={ikon} size={20} color={W.utama} /><T ringkas tebal ukuran={22}>{nilai}</T>
-    <T ringkas ukuran={13} redup>{label}</T>
+  const guru = ikon === "people-outline";
+  return <View accessible accessibilityLabel={`${label} ${nilai} dari ${total}`} style={[s.metrik, { minWidth: 80 * fontScale }]}>
+    <View style={[s.ikonKotak, { backgroundColor: guru ? W.utamaMuda : "#FFE8DC" }]}>
+      <Ionicons name={ikon} size={18} color={guru ? W.utama : "#B24A12"} />
+    </View>
+    <T ringkas tebal ukuran={22}>{nilai}<T tebal ukuran={13} redup>/{total}</T></T>
+    <T ringkas ukuran={12} redup>{label}</T>
   </View>;
 }
 
@@ -25,9 +29,9 @@ function Perhatian({ judul, sub, nilai, warna, buka, onPress }: {
   return <Pressable accessibilityRole="button" accessibilityState={{ expanded: buka }}
     accessibilityLabel={nilai + " " + judul + ", " + sub}
     onPress={onPress} style={[s.perhatian, { minWidth: Math.min(180, 124 * fontScale), backgroundColor: warna === "merah" ? W.merahMuda : W.izinMuda }]}>
-    <T tebal ukuran={26} style={{ color: warna === "merah" ? W.merah : W.kuning }}>{nilai}</T>
-    <T tebal>{judul}</T>
-    <T redup ukuran={12}>{sub}</T>
+    <T tebal ukuran={24} style={{ color: warna === "merah" ? W.merah : W.kuning }}>{nilai}</T>
+    <T tebal ukuran={13}>{judul}</T>
+    <T redup ukuran={12} numberOfLines={2}>{sub}</T>
   </Pressable>;
 }
 
@@ -87,13 +91,13 @@ export default function Pantauan() {
       {p && <View><T tebal ukuran={40} style={s.putih}>{p.siswa.persenHadir == null ? "—" : p.siswa.persenHadir + "%"}</T><T style={s.putih}>siswa hadir</T></View>}
     </Hero>
     {p && <View style={[s.angka, { marginTop: -28 }]}>
-      <Angka ikon="people" label="Guru hadir" nilai={p.guru.hadir + "/" + p.guru.total} />
-      <Angka ikon="book" label="Jurnal terisi" nilai={p.jadwal.terisi + "/" + p.jadwal.total} />
+      <Angka ikon="people-outline" label="Guru hadir" nilai={p.guru.hadir} total={p.guru.total} />
+      <Angka ikon="document-text-outline" label="Jurnal terisi" nilai={p.jadwal.terisi} total={p.jadwal.total} />
     </View>}
     {memuat && <Memuat />}
     {galat && <><Pesan jenis="galat" teks={galat} /><Tombol judul="Coba lagi" onPress={muat} /></>}
     {p && <>
-      <Baris><Judul kecil>Perlu perhatian</Judul><Lencana teks={String(kategori)} jenis={kategori ? "merah" : "hijau"} /></Baris>
+      <Judul kecil>Perlu perhatian</Judul>
       {!kategori && <Kartu><T redup>Semua guru sudah absen dan semua jadwal sudah diisi.</T></Kartu>}
       {(p.belumAbsen.length > 0 || p.belumJurnal.length > 0) && <View style={s.angka}>
         {p.belumAbsen.length > 0 && <Perhatian nilai={p.belumAbsen.length} warna="merah" judul="Guru belum absen"
@@ -130,7 +134,8 @@ const s = StyleSheet.create({
   putih: { color: W.putih },
   tanggal: { flexDirection: "row", minHeight: 48, gap: 8, alignItems: "center" },
   angka: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  metrik: { flex: 1, backgroundColor: W.putih, padding: 14, borderRadius: 16, borderColor: W.garis, borderWidth: 1, gap: 3 },
-  perhatian: { flex: 1, minHeight: 48, padding: 14, gap: 3, borderRadius: 16 },
+  metrik: { flex: 1, backgroundColor: W.putih, padding: 14, borderRadius: 18, gap: 6, elevation: 4, shadowColor: "#0C3C2D", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
+  ikonKotak: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  perhatian: { flex: 1, minHeight: 48, padding: 14, gap: 4, borderRadius: 18 },
   aksi: { backgroundColor: W.teks, borderRadius: 12, minHeight: 48, padding: 12, flexDirection: "row", gap: 10, alignItems: "center", justifyContent: "center" },
 });
